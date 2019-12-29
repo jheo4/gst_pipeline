@@ -1,3 +1,9 @@
+// this example is same with the command:
+//   gst-launch-1.0 playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm
+//   gst-launch-1.0 souphttpsrc location=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm \
+//   		! matroskademux name=d ! queue ! vp8dec ! videoconvert ! autovideosink d. ! queue ! vorbisdec ! audioconvert \
+//			! audioresample ! autoaudiosink
+
 #include <gst/gst.h>
 
 int main(int argc, char *argv[])
