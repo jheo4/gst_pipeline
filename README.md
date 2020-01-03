@@ -11,6 +11,11 @@ sudo apt-get install python3 python3-pip python3-setuptools \
 sudo apt install meson
 ```
 
+### Meson References
+ - https://mesonbuild.com/Tutorial.html
+ - https://mesonbuild.com/Dependencies.html
+ - https://mesonbuild.com/Include-directories.html
+
 ## Install GStreamer
 Install Dependencies
 ```
