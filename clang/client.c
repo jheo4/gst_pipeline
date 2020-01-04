@@ -91,6 +91,9 @@ int main(int argc, char *argv[])
   g_print("Starting client pipeline \n");
   gst_element_set_state(GST_ELEMENT(data.pipeline), GST_STATE_PLAYING);
 
+  // export the pipeline graph
+  GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)data.pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "server-pipeline");
+
   g_main_loop_run(data.loop);
 
   g_print("Stopping client pipeline \n");
