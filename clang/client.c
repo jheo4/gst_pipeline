@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
   gst_element_set_state(GST_ELEMENT(data.pipeline), GST_STATE_PLAYING);
 
   // export the pipeline graph
-  GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)data.pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "server-pipeline");
+  GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)data.pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "client-pipeline");
 
   g_main_loop_run(data.loop);
 
