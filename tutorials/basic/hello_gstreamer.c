@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
                 NULL);
 
 	// start the playback by setting the pipeline state as PLAYING.
+  GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)pipeline, GST_DEBUG_GRAPH_SHOW_ALL, "test");
   gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
   // retrieve the pipeline's bus

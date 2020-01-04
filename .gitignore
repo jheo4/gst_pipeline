@@ -53,3 +53,8 @@ dkms.conf
 
 # Meson
 builddir/
+
+# Graph Export
+*.png
+*.pdf
+*.dot

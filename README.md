@@ -1,6 +1,7 @@
 # gstreamer
 
-## Install Meson
+## Installation
+### Install Meson
 Install Dependencies & Meson
 ```
 # Dependencies
@@ -11,12 +12,12 @@ sudo apt-get install python3 python3-pip python3-setuptools \
 sudo apt install meson
 ```
 
-### Meson References
+#### Meson References
  - https://mesonbuild.com/Tutorial.html
  - https://mesonbuild.com/Dependencies.html
  - https://mesonbuild.com/Include-directories.html
 
-## Install GStreamer
+### Install GStreamer
 Install Dependencies
 ```
 sudo apt-get install -y \
@@ -36,3 +37,8 @@ sudo apt-get install -y \
   gstreamer1.0-libav gstreamer1.0-doc gstreamer1.0-tools gstreamer1.0-x  gstreamer1.0-plugins-base-apps \
   gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
 ```
+
+
+## Exporting Graph Pipeline
+export GST_DEBUG_DUMP_DOT_DIR=[TARGET_DIRECTORY]
+
