@@ -39,38 +39,29 @@
 #include <gst/gst.h>
 #include <gst/rtp/rtp.h>
 
-#include <global.h>
-#include <session.h>
+#include <gst_common.h>
+#include <stream_session.h>
 #include <cb_basic.h>
 #include <aux.h>
 #include <ghost.h>
 
-static SessionData_t* make_audio_session(guint session_num);
-static SessionData_t* make_video_session(guint session_num);
-static void add_stream(CustomData_t* data, SessionData_t* session);
+static StreamSession_t* make_audio_session(guint session_num);
+static StreamSession_t* make_video_session(guint session_num);
+static void add_stream(GstCommonData_t* data, StreamSession_t* session);
 
 
 int main(int argc, char *argv[])
 {
-  CustomData_t data;
-  memset(&data, 0, sizeof(data));
-
-  GstBus *bus;
-  SessionData_t *video_session, *audio_session;
-
   gst_init(&argc, &argv);
 
-  data.loop = g_main_loop_new(NULL, FALSE);
+  GstCommonData_t data;
+  init_common_data(&data);
 
-  // Create a new pipeline & watch signals from the pipeline's bus
-  data.pipeline = GST_PIPELINE(gst_pipeline_new(NULL));
-  bus = gst_element_get_bus(GST_ELEMENT(data.pipeline));
-  g_signal_connect(bus, "message::error", G_CALLBACK(cb_error), &data);
-  g_signal_connect(bus, "message::warning", G_CALLBACK(cb_warning), &data);
-  g_signal_connect(bus, "message::state-changed", G_CALLBACK(cb_state), &data);
-  g_signal_connect(bus, "message::eos", G_CALLBACK(cb_eos), &data);
-  gst_bus_add_signal_watch(bus);
+  GstBus *bus = gst_element_get_bus(GST_ELEMENT(data.pipeline));
+  connect_basic_signals(bus, &data);
   gst_object_unref(bus);
+
+  StreamSession_t *video_session, *audio_session;
 
   // RTP bin combines the functions of rtpsession, rtpssrcdemux, rtpjitterbuffer and rtpptdemux in one element.
   // It allows for multiple RTP sessions that will be synchronized together using RTCP SR packets.
@@ -208,6 +199,7 @@ static void add_stream(CustomData_t* data, SessionData_t *session)
   pad_name = g_strdup_printf("send_rtp_sink_%u", session->id);
   gst_element_link_pads(session->bin, "src", data->rtp_bin, pad_name);
   g_free(pad_name);
+
   pad_name = g_strdup_printf("send_rtp_src_%u", session->id);
   gst_element_link_pads(data->rtp_bin, pad_name, identity, "sink");
   gst_element_link(identity, rtp_sink);

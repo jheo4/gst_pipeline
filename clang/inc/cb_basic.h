@@ -1,17 +1,17 @@
 #include <gst/gst.h>
-#include <global.h>
+#include <gst_common.h>
 
 #ifndef __CB_BASIC__
 #define __CB_BASIC__
 
-static void cb_eos(GstBus *bus, GstMessage *message, CustomData_t* data)
+static void cb_eos(GstBus *bus, GstMessage *message, GstCommonData_t* data)
 {
   g_print("End of Stream \n");
   g_main_loop_quit(data->loop);
 }
 
 
-static void cb_state(GstBus *bus, GstMessage *message, CustomData_t* data)
+static void cb_state(GstBus *bus, GstMessage *message, GstCommonData_t* data)
 {
   GstState old_state, new_state, pending_state;
   gst_message_parse_state_changed(message, &old_state, &new_state, &pending_state);
@@ -21,7 +21,7 @@ static void cb_state(GstBus *bus, GstMessage *message, CustomData_t* data)
 }
 
 
-static void cb_warning(GstBus *bus, GstMessage *message, CustomData_t data)
+static void cb_warning(GstBus *bus, GstMessage *message, GstCommonData_t data)
 {
   GError *warning = NULL;
 
@@ -31,7 +31,7 @@ static void cb_warning(GstBus *bus, GstMessage *message, CustomData_t data)
 }
 
 
-static void cb_error(GstBus *bus, GstMessage *message, CustomData_t* data)
+static void cb_error(GstBus *bus, GstMessage *message, GstCommonData_t* data)
 {
   GError *error = NULL;
 
@@ -42,5 +42,19 @@ static void cb_error(GstBus *bus, GstMessage *message, CustomData_t* data)
   g_main_loop_quit(data->loop);
 }
 
+
+static gboolean connect_basic_signals(GstBus *bus, GstCommonData_t* data)
+{
+  if(!g_signal_connect(bus, "message::error", G_CALLBACK(cb_error), data) ||
+     !g_signal_connect(bus, "message::warning", G_CALLBACK(cb_warning), data) ||
+     !g_signal_connect(bus, "message::state-changed", G_CALLBACK(cb_state), &data) ||
+     !g_signal_connect(bus, "message::eos", G_CALLBACK(cb_eos), &data)) {
+    g_printerr("Failure to connect basic signals(error, warning, state-changed, eos) to the bus");
+    return FALSE;
+  }
+
+  gst_bus_add_signal_watch(bus);
+  return TRUE;
+}
 #endif
 

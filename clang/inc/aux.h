@@ -1,14 +1,18 @@
 #include <gst/gst.h>
-#include <session.h>
+#include <stream_session.h>
+#include <gst_common.h>
 
-#ifndef __AUX__
-#define __AUX__
+#ifndef __RTP_RTCP__
+#define __RTP_RTCP__
+
+static GstElement* request_aux_sender(GstElement*, guint, StreamSession_t*);
+static GstElement* request_aux_receiver(GstElement*, guint, StreamSession_t*);
 
 /*
  * when the request_aux_sender signal is received, request_aux_sender returns the auxiliary stream sender
  *   auxiliary sender: new bin of rtprtxsend with ghost sink & source
  */
-static GstElement* request_aux_sender(GstElement *rtp_bin, guint sess_id, SessionData_t *session)
+static GstElement* request_aux_sender(GstElement* rtp_bin, guint sess_id, StreamSession_t* session)
 {
   GstElement *rtx, *bin;
   GstPad *pad;
@@ -46,7 +50,7 @@ static GstElement* request_aux_sender(GstElement *rtp_bin, guint sess_id, Sessio
 }
 
 
-static GstElement* request_aux_receiver(GstElement *rtp_bin, guint session_id, SessionData_t *session)
+static GstElement* request_aux_receiver(GstElement* rtp_bin, guint session_id, StreamSession_t* session)
 {
   GstElement *rtx, *bin;
   GstPad *pad;
@@ -82,7 +86,7 @@ static GstElement* request_aux_receiver(GstElement *rtp_bin, guint session_id, S
 /*
  *  request the payload-type mapping
  */
-static GstCaps* request_pt_map(GstElement *source, guint session_id, guint pt, SessionData_t* session)
+static GstCaps* request_pt_map(GstElement* source, guint session_id, guint pt, StreamSession_t* session)
 {
   gchar *caps_str;
   g_print("Looking for caps for pt %u in session %u, have %u \n", pt, session_id, session->id);
