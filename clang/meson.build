@@ -12,5 +12,5 @@ gst_vid_dep = dependency('gstreamer-audio-1.0')
 inc = include_directories('inc')
 
 #executable('server', 'server.c', dependencies : [gst_dep, gst_aud_dep, gst_vid_dep], include_directories : inc)
-#executable('client', 'client.c', dependencies : [gst_dep, gst_aud_dep, gst_vid_dep], include_directories : inc)
+executable('client', 'client.c', dependencies : [gst_dep, gst_aud_dep, gst_vid_dep], include_directories : inc)
 executable('creator', 'creator.c', dependencies : [gst_dep, gst_aud_dep, gst_vid_dep], include_directories : inc)

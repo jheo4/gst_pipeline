@@ -18,7 +18,8 @@ static gboolean gst_element_factory_make_wrapper(GstElement** element, const gch
 static gboolean gst_element_link_wrapper(GstElement *src, GstElement *dest)
 {
   if(!gst_element_link(src, dest)) {
-    g_printerr("elements (%s-->%s) could not be linked \n", gst_element_get_name(src), gst_element_get_name(dest));
+    g_printerr("elements (%s-->%s) could not be linked \n",
+               gst_element_get_name(src), gst_element_get_name(dest));
     return FALSE;
   }
 

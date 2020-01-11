@@ -28,12 +28,7 @@ static GstCommonData_t* make_common_data()
     return NULL;
   }
 
-  // GstRTPProfile:
-  //   GST_RTP_PROFILE_UNKNOWN: invalid profile
-  //   GST_RTP_PROFILE_AVP: the Audio/Visual profile (RFC 3551)
-  //   GST_RTP_PROFILE_SAVP: the secure Audio/Visual profile (RFC 3711)
-  //   GST_RTP_PROFILE_AVPF: the Audio/Visual profile with feedback (RFC 4585)
-  //   GST_RTP_PROFILE_SAVPF: the secure Audio/Visual profile with feedback (RFC 5124)
+  // RTP reference: https://bit.ly/30bBOzg
   DEBUG("set common data");
   g_object_set(data->rtp_bin, "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
   gst_bin_add(GST_BIN(data->pipeline), data->rtp_bin);

@@ -35,7 +35,8 @@ static gboolean init_creator_data(CreatorData_t* data)
 
   g_object_set(data->filesrc, "location", "/home/jin/github/4k.mp4", NULL);
 
-  gst_bin_add_many(GST_BIN(data->common_data->pipeline), data->filesrc, data->decodebin, NULL);
+  gst_bin_add_many(GST_BIN(data->common_data->pipeline), data->filesrc,
+                   data->decodebin, NULL);
   gst_element_link_wrapper(data->filesrc, data->decodebin);
 
   DEBUG("End");
@@ -43,7 +44,8 @@ static gboolean init_creator_data(CreatorData_t* data)
 }
 
 
-static void file_pad_added_handler(GstElement* src, GstPad* new_pad, CreatorData_t* data)
+static void file_pad_added_handler(GstElement* src, GstPad* new_pad,
+                                   CreatorData_t* data)
 {
   GstCaps* new_pad_caps = gst_pad_get_current_caps(new_pad);
   GstStructure* new_caps_struct = gst_caps_get_structure(new_pad_caps, 0);
@@ -83,7 +85,8 @@ static void file_pad_added_handler(GstElement* src, GstPad* new_pad, CreatorData
     ret = gst_pad_link(new_pad, video_sink_pad);
   }
 
-  if(GST_PAD_LINK_FAILED(ret)) g_print("Type %s: link failed \n", new_caps_type);
+  if(GST_PAD_LINK_FAILED(ret))
+    g_print("Type %s: link failed \n", new_caps_type);
   else g_print("Type %s: link success \n", new_caps_type);
 
   exit:
@@ -93,18 +96,21 @@ static void file_pad_added_handler(GstElement* src, GstPad* new_pad, CreatorData
 }
 
 
-static StreamSession_t* make_video_session(guint session_id, CreatorData_t* data)
+static StreamSession_t* make_video_session(guint session_id,
+                                           CreatorData_t* data)
 {
   GstBin* bin = GST_BIN(gst_bin_new(NULL));
   GstElement *video_convert, *h264_encoder, *h264_payloader;
 
-  gst_element_factory_make_wrapper(&video_convert, "videoconvert", "videoconvert");
-  gst_element_factory_make_wrapper(&h264_encoder, "x264enc", "x264enc");
-  gst_element_factory_make_wrapper(&h264_payloader, "rtph264pay", "rtph264pay");
+  gst_element_factory_make_wrapper(&video_convert, "videoconvert", NULL);
+  gst_element_factory_make_wrapper(&h264_encoder, "x264enc", NULL);
+  gst_element_factory_make_wrapper(&h264_payloader, "rtph264pay", NULL);
 
-  g_object_set(h264_encoder, "pass", 5, "quantizer", 25, "speed-preset", 6,  NULL);
+  g_object_set(h264_encoder, "pass", 5, "quantizer", 25,
+               "speed-preset", 6,  NULL);
 
   gst_bin_add_many(bin, video_convert, h264_encoder, h264_payloader, NULL);
+  // caps with filtered???              
   gst_element_link_wrapper(video_convert, h264_encoder);
   gst_element_link_wrapper(h264_encoder, h264_payloader);
 
@@ -118,21 +124,25 @@ static StreamSession_t* make_video_session(guint session_id, CreatorData_t* data
 }
 
 
-static StreamSession_t* make_audio_session(guint session_id, CreatorData_t* data)
+static StreamSession_t* make_audio_session(guint session_id,
+                                           CreatorData_t* data)
 {
   GstBin* bin = GST_BIN(gst_bin_new(NULL));
-  GstElement *audio_convert, *ac3_encoder, *ac3_payloader;
+  GstElement *audio_convert, *ac_decoder, *alaw_encoder, *pcma_payloader;
 
-  gst_element_factory_make_wrapper(&audio_convert, "audioconvert", "audioconvert");
-  gst_element_factory_make_wrapper(&ac3_encoder, "avenc_ac3", "avenc_ac3");
-  gst_element_factory_make_wrapper(&ac3_payloader, "rtpac3pay", "rtpac3pay");
+  gst_element_factory_make_wrapper(&audio_convert, "audioconvert", NULL);
+  //avenc_ac3 alawenc
+  gst_element_factory_make_wrapper(&ac_decoder, "a52dec", NULL);
+  gst_element_factory_make_wrapper(&alaw_encoder, "alawenc", NULL);
+  gst_element_factory_make_wrapper(&pcma_payloader, "rtppcmapay", NULL);
 
-  gst_bin_add_many(bin, audio_convert, ac3_encoder, ac3_payloader, NULL);
-  gst_element_link_wrapper(audio_convert, ac3_encoder);
-  gst_element_link_wrapper(ac3_encoder, ac3_payloader);
+  gst_bin_add_many(bin, audio_convert, ac_decoder, alaw_encoder, pcma_payloader, NULL);
+  gst_element_link_wrapper(audio_convert, ac_decoder);
+  gst_element_link_wrapper(ac_decoder, alaw_encoder);
+  gst_element_link_wrapper(alaw_encoder, pcma_payloader);
 
   setup_ghost_sink(audio_convert, bin);
-  setup_ghost_src(ac3_payloader, bin);
+  setup_ghost_src(pcma_payloader, bin);
 
   StreamSession_t* session = create_stream_session(session_id);
   session->bin = GST_ELEMENT(bin);
@@ -141,7 +151,8 @@ static StreamSession_t* make_audio_session(guint session_id, CreatorData_t* data
 }
 
 
-static gboolean setup_rtp_with_stream_session(GstCommonData_t* common_data, StreamSession_t* stream_session)
+static gboolean setup_rtp_transmission_with_stream_session(
+                 GstCommonData_t* common_data, StreamSession_t* stream_session)
 {
   GstElement *rtp_sink, *rtcp_sink, *rtcp_src;
   gst_element_factory_make_wrapper(&rtp_sink, "udpsink", NULL);
@@ -151,23 +162,26 @@ static gboolean setup_rtp_with_stream_session(GstCommonData_t* common_data, Stre
   int session_port_base = CREATOR_PORT_BASE + (stream_session->id * 3);
   g_object_set(rtp_sink, "port", session_port_base, "host", "127.0.0.1", NULL);
   g_object_set(rtcp_src, "port", session_port_base+2, NULL);
-  g_object_set(rtcp_sink, "port", session_port_base+1, "host", "127.0.0.1", "sync", FALSE, "async", FALSE, NULL);
+  g_object_set(rtcp_sink, "port", session_port_base+1, "host",
+               "127.0.0.1", "sync", FALSE, "async", FALSE, NULL);
 
   gst_bin_add_many(GST_BIN(common_data->pipeline),
                    rtp_sink, rtcp_sink, rtcp_src,
                    stream_session->bin, NULL);
-  g_signal_connect(common_data->rtp_bin, "request_aux_sender", (GCallback)request_aux_sender, stream_session);
+  //g_signal_connect(common_data->rtp_bin, "request_aux_sender",
+  //                 (GCallback)request_aux_sender, stream_session);
 
   // session_bin (src) --> (send_rtp_sink) rtp_bin --> rtp_sink
-  gst_element_link_pads(stream_session->bin, "src",
-                        common_data->rtp_bin, g_strdup_printf("send_rtp_sink_%u", stream_session->id));
+  gst_element_link_pads(stream_session->bin, "src", common_data->rtp_bin,
+                      g_strdup_printf("send_rtp_sink_%u", stream_session->id));
   gst_element_link(common_data->rtp_bin, rtp_sink);
 
   // rtcp_src (src) --> (recv_rtcp_sink) rtp_bin (send_rtcp_src) --> rtcp_sink
-  gst_element_link_pads(rtcp_src, "src",
-                        common_data->rtp_bin, g_strdup_printf("recv_rtcp_sink_%u", stream_session->id));
-  gst_element_link_pads(common_data->rtp_bin, g_strdup_printf("send_rtcp_src_%u", stream_session->id),
-                        rtcp_sink, "sink");
+  gst_element_link_pads(rtcp_src, "src", common_data->rtp_bin,
+                     g_strdup_printf("recv_rtcp_sink_%u", stream_session->id));
+  gst_element_link_pads(common_data->rtp_bin,
+                       g_strdup_printf("send_rtcp_src_%u", stream_session->id),
+                       rtcp_sink, "sink");
 
   g_print("New RTP sink stream on %i \n", session_port_base);
   g_print("New RTCP sink stream on %i \n", session_port_base+1);
