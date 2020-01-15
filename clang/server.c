@@ -80,10 +80,10 @@ int main(int argc, char *argv[])
 
   // make video & audio RTP sessions
   video_session = make_video_session(0);
-  audio_session = make_audio_session(1);
+  //audio_session = make_audio_session(1);
 
   add_stream(&data, video_session);
-  add_stream(&data, audio_session);
+  //add_stream(&data, audio_session);
 
   g_print("starting server pipeline \n");
   gst_element_set_state(GST_ELEMENT(data.pipeline), GST_STATE_PLAYING);

@@ -30,14 +30,13 @@ static gboolean init_creator_data(CreatorData_t* data)
   data->common_data = make_common_data();
 
   DEBUG("make creator data & setting");
-  gst_element_factory_make_wrapper(&data->filesrc, "filesrc", "filesrc");
-  gst_element_factory_make_wrapper(&data->decodebin, "decodebin", "decodebin");
+  //gst_element_factory_make_wrapper(&data->filesrc, "filesrc", "filesrc");
+  //gst_element_factory_make_wrapper(&data->decodebin, "decodebin", "decodebin");
+  //g_object_set(data->filesrc, "location", "/home/jin/github/4k.mp4", NULL);
 
-  g_object_set(data->filesrc, "location", "/home/jin/github/4k.mp4", NULL);
-
-  gst_bin_add_many(GST_BIN(data->common_data->pipeline), data->filesrc,
-                   data->decodebin, NULL);
-  gst_element_link_wrapper(data->filesrc, data->decodebin);
+  //gst_bin_add_many(GST_BIN(data->common_data->pipeline), data->filesrc,
+  //                data->decodebin, NULL);
+  //gst_element_link_wrapper(data->filesrc, data->decodebin);
 
   DEBUG("End");
   return TRUE;
@@ -100,21 +99,26 @@ static StreamSession_t* make_video_session(guint session_id,
                                            CreatorData_t* data)
 {
   GstBin* bin = GST_BIN(gst_bin_new(NULL));
-  GstElement *video_convert, *h264_encoder, *h264_payloader;
-
-  gst_element_factory_make_wrapper(&video_convert, "videoconvert", NULL);
+  GstElement *test_src, *video_convert, *h264_encoder, *h264_payloader;
+  gst_element_factory_make_wrapper(&test_src, "videotestsrc", NULL);
   gst_element_factory_make_wrapper(&h264_encoder, "x264enc", NULL);
   gst_element_factory_make_wrapper(&h264_payloader, "rtph264pay", NULL);
 
-  g_object_set(h264_encoder, "pass", 5, "quantizer", 25,
-               "speed-preset", 6,  NULL);
+  //g_object_set(h264_encoder, "pass", 5, "quantizer", 25,
+  //             "speed-preset", 6,  NULL);
+  g_object_set (test_src, "is-live", TRUE, "horizontal-speed", 1, NULL);
+  g_object_set (h264_payloader, "config-interval", 2, NULL);
 
-  gst_bin_add_many(bin, video_convert, h264_encoder, h264_payloader, NULL);
-  // caps with filtered???              
-  gst_element_link_wrapper(video_convert, h264_encoder);
+  gst_bin_add_many(bin, test_src, h264_encoder, h264_payloader, NULL);
+
+  GstCaps* video_caps = gst_caps_new_simple ("video/x-raw",
+      "width", G_TYPE_INT, 352,
+      "height", G_TYPE_INT, 288, "framerate", GST_TYPE_FRACTION, 15, 1, NULL);
+
+  gst_element_link_filtered(test_src, h264_encoder, video_caps);
   gst_element_link_wrapper(h264_encoder, h264_payloader);
 
-  setup_ghost_sink(video_convert, bin);
+  //setup_ghost_sink(video_convert, bin);
   setup_ghost_src(h264_payloader, bin);
 
   StreamSession_t* session = create_stream_session(session_id);
@@ -161,32 +165,37 @@ static gboolean setup_rtp_transmission_with_stream_session(
 
   int session_port_base = CREATOR_PORT_BASE + (stream_session->id * 3);
   g_object_set(rtp_sink, "port", session_port_base, "host", "127.0.0.1", NULL);
-  g_object_set(rtcp_src, "port", session_port_base+2, NULL);
   g_object_set(rtcp_sink, "port", session_port_base+1, "host",
                "127.0.0.1", "sync", FALSE, "async", FALSE, NULL);
+  g_object_set(rtcp_src, "port", session_port_base+2, NULL);
+
 
   gst_bin_add_many(GST_BIN(common_data->pipeline),
                    rtp_sink, rtcp_sink, rtcp_src,
                    stream_session->bin, NULL);
-  //g_signal_connect(common_data->rtp_bin, "request_aux_sender",
-  //                 (GCallback)request_aux_sender, stream_session);
 
-  // session_bin (src) --> (send_rtp_sink) rtp_bin --> rtp_sink
-  gst_element_link_pads(stream_session->bin, "src", common_data->rtp_bin,
-                      g_strdup_printf("send_rtp_sink_%u", stream_session->id));
-  gst_element_link(common_data->rtp_bin, rtp_sink);
+  g_signal_connect(common_data->rtp_bin, "request_aux_sender",
+                   (GCallback)request_aux_sender, stream_session);
 
-  // rtcp_src (src) --> (recv_rtcp_sink) rtp_bin (send_rtcp_src) --> rtcp_sink
-  gst_element_link_pads(rtcp_src, "src", common_data->rtp_bin,
-                     g_strdup_printf("recv_rtcp_sink_%u", stream_session->id));
-  gst_element_link_pads(common_data->rtp_bin,
-                       g_strdup_printf("send_rtcp_src_%u", stream_session->id),
-                       rtcp_sink, "sink");
+  gchar* pad_name;
+  pad_name = g_strdup_printf("send_rtp_sink_%u", stream_session->id);
+  gst_element_link_pads(stream_session->bin, "src",
+                        common_data->rtp_bin, pad_name);
+  gst_element_link_wrapper(common_data->rtp_bin, rtp_sink);
+  g_free(pad_name);
 
-  g_print("New RTP sink stream on %i \n", session_port_base);
-  g_print("New RTCP sink stream on %i \n", session_port_base+1);
-  g_print("New RTCP src stream on %i \n", session_port_base+2);
+  pad_name = g_strdup_printf("send_rtcp_src_%u", stream_session->id);
+  gst_element_link_pads(common_data->rtp_bin, pad_name, rtcp_sink, "sink");
+  g_free(pad_name);
 
+  pad_name = g_strdup_printf("recv_rtcp_sink_%u", stream_session->id);
+  gst_element_link_pads(rtcp_src, "src", common_data->rtp_bin, pad_name);
+  g_free(pad_name);
+
+  DEBUG("RTP sink stream (%i) / RTCP sink stream (%i) / RTCP src stream (%i)",
+        session_port_base, session_port_base+1, session_port_base+2);
+
+  stream_session_unref(stream_session);
   return TRUE;
 }
 

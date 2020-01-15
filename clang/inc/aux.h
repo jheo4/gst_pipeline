@@ -28,8 +28,10 @@ static GstElement* request_aux_sender(GstElement* rtp_bin, guint sess_id, Stream
   //   - if retransmission events occur, look up the requested seqnum from the history & resend it as auxiliary stream
   rtx = gst_element_factory_make("rtprtxsend", NULL);
 
-  pt_map = gst_structure_new("application/x-rtp-pt-map", "8", G_TYPE_UINT, 98, "96", G_TYPE_UINT, 99, NULL);
-  g_object_set(rtx, "payload-type-map", pt_map, NULL); // https://en.wikipedia.org/wiki/RTP_payload_formats
+  pt_map = gst_structure_new("application/x-rtp-pt-map", "8", G_TYPE_UINT, 98,
+                             "96", G_TYPE_UINT, 99, NULL);
+  // https://en.wikipedia.org/wiki/RTP_payload_formats
+  g_object_set(rtx, "payload-type-map", pt_map, NULL);
   gst_structure_free(pt_map);
 
   gst_bin_add(GST_BIN(bin), rtx);
@@ -62,9 +64,11 @@ static GstElement* request_aux_receiver(GstElement* rtp_bin, guint session_id, S
   bin = gst_bin_new(NULL);
   rtx = gst_element_factory_make("rtprtxreceive", NULL);
   // currently pt_map is hardcoded
-  pt_map = gst_structure_new("application/x-rtp-pt-map", "8", G_TYPE_UINT, 98, "96", G_TYPE_UINT, 99, NULL);
+  pt_map = gst_structure_new("application/x-rtp-pt-map", "8", G_TYPE_UINT, 98,
+                             "96", G_TYPE_UINT, 99, NULL);
   g_object_set(rtx, "payload-type-map", pt_map, NULL);
   gst_structure_free(pt_map);
+
   gst_bin_add(GST_BIN(bin), rtx);
 
   pad = gst_element_get_static_pad(rtx, "src");
@@ -86,10 +90,12 @@ static GstElement* request_aux_receiver(GstElement* rtp_bin, guint session_id, S
 /*
  *  request the payload-type mapping
  */
-static GstCaps* request_pt_map(GstElement* source, guint session_id, guint pt, StreamSession_t* session)
+static GstCaps* request_pt_map(GstElement* source, guint session_id,
+                               guint pt, StreamSession_t* session)
 {
-  gchar *caps_str;
-  g_print("Looking for caps for pt %u in session %u, have %u \n", pt, session_id, session->id);
+  gchar* caps_str;
+  DEBUG("Looking for caps for pt %u in session %u, have %u \n",
+        pt, session_id, session->id);
 
   if(session_id == session->id) {
     caps_str = gst_caps_to_string(session->caps);

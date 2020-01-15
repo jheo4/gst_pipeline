@@ -15,26 +15,20 @@
 
 int main(int argc, char *argv[])
 {
-  // read video & audio from the rtpbins & decoding it & play it
   DEBUG("Start");
-  // argv: ipaddr & port of a server
   gst_init(&argc, &argv);
 
-  DEBUG("initialize data");
   ClientData_t client_data;
   init_client_data(&client_data);
 
-  DEBUG("set bus");
   GstBus* bus = gst_element_get_bus(GST_ELEMENT(client_data.common_data->pipeline));
   connect_basic_signals(bus, client_data.common_data);
   gst_object_unref(bus);
 
-  DEBUG("make audio/video sessions");
+  DEBUG("make video sessions");
   client_data.v_session = make_video_session(0, &client_data);
-  client_data.a_session = make_audio_session(1, &client_data);
 
   DEBUG("setup the connnection between udpsink/src and rtpbin");
-  setup_rtp_delivery_with_stream_session(client_data.common_data, client_data.a_session);
   setup_rtp_delivery_with_stream_session(client_data.common_data, client_data.v_session);
 
   DEBUG("run pipeline");
