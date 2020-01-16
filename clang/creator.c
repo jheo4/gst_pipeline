@@ -29,8 +29,10 @@ int main(int argc, char **argv)
   connect_basic_signals(bus, creator_data.common_data);
   g_object_unref(bus);
 
-  DEBUG("create sessions");
+  DEBUG("create & connect sessions to pipeline");
   creator_data.v_session = make_video_session(0, &creator_data);
+  gst_element_link_filtered(creator_data.test_src, creator_data.v_session->bin,
+                            creator_data.v_session->v_caps);
 
   DEBUG("setup rtp with session");
   setup_rtp_transmission_with_stream_session(creator_data.common_data,

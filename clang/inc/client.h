@@ -84,11 +84,11 @@ static StreamSession_t* make_video_session(guint session_id,
 
   StreamSession_t* session = create_stream_session(session_id);
   session->bin = GST_ELEMENT(bin);
-  session->caps = gst_caps_new_simple("application/x-rtp",
-                                      "media", G_TYPE_STRING, "video",
-                                      "clock-rate", G_TYPE_INT, 90000,
-                                      "encoding-name", G_TYPE_STRING, "H264",
-                                      NULL);
+  session->v_caps = gst_caps_new_simple("application/x-rtp",
+                                        "media", G_TYPE_STRING, "video",
+                                        "clock-rate", G_TYPE_INT, 90000,
+                                        "encoding-name", G_TYPE_STRING, "H264",
+                                        NULL);
 
   return session;
 }
@@ -131,7 +131,7 @@ static gboolean setup_rtp_delivery_with_stream_session(
   DEBUG("setup rtp elements");
   int session_port_base = 3000 + (session->id * 3); // for testing, set it as a creator's port number
   g_object_set(rtp_src, "port", session_port_base,
-               "caps", session->caps, NULL);
+               "caps", session->v_caps, NULL);
   g_object_set(rtcp_src, "port", session_port_base+1, NULL);
   g_object_set(rtcp_sink, "port", session_port_base+2,
                "host", "127.0.0.1", "sync", FALSE, "async", FALSE, NULL);

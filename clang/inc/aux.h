@@ -98,10 +98,10 @@ static GstCaps* request_pt_map(GstElement* source, guint session_id,
         pt, session_id, session->id);
 
   if(session_id == session->id) {
-    caps_str = gst_caps_to_string(session->caps);
+    caps_str = gst_caps_to_string(session->v_caps);
     g_print("Returning %s \n", caps_str);
     g_free(caps_str);
-    return gst_caps_ref(session->caps);
+    return gst_caps_ref(session->v_caps);
   }
 
   return NULL;

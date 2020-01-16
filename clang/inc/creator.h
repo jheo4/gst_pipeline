@@ -14,31 +14,30 @@
 typedef struct _CreatorData_t
 {
   GstCommonData_t *common_data;
-  GstElement *filesrc, *decodebin;
+  GstElement *file_src, *decodebin;
+  GstElement *test_src;
   StreamSession_t *v_session, *a_session;
 } CreatorData_t;
 
 
 static gboolean init_creator_data(CreatorData_t* data)
 {
-  DEBUG("Start");
   data->common_data = NULL;
-  data->filesrc = NULL, data->decodebin = NULL;
+  data->test_src = NULL, data->file_src = NULL, data->decodebin = NULL;
   data->v_session = NULL, data->a_session = NULL;
 
-  DEBUG("set common data");
   data->common_data = make_common_data();
 
   DEBUG("make creator data & setting");
+  gst_element_factory_make_wrapper(&data->test_src, "videotestsrc", NULL);
+  g_object_set (data->test_src, "is-live", TRUE, "horizontal-speed", 1, NULL);
+  gst_bin_add_many(GST_BIN(data->common_data->pipeline), data->test_src, NULL);
+
   //gst_element_factory_make_wrapper(&data->filesrc, "filesrc", "filesrc");
   //gst_element_factory_make_wrapper(&data->decodebin, "decodebin", "decodebin");
   //g_object_set(data->filesrc, "location", "/home/jin/github/4k.mp4", NULL);
-
-  //gst_bin_add_many(GST_BIN(data->common_data->pipeline), data->filesrc,
-  //                data->decodebin, NULL);
   //gst_element_link_wrapper(data->filesrc, data->decodebin);
 
-  DEBUG("End");
   return TRUE;
 }
 
@@ -99,30 +98,27 @@ static StreamSession_t* make_video_session(guint session_id,
                                            CreatorData_t* data)
 {
   GstBin* bin = GST_BIN(gst_bin_new(NULL));
-  GstElement *test_src, *video_convert, *h264_encoder, *h264_payloader;
-  gst_element_factory_make_wrapper(&test_src, "videotestsrc", NULL);
+  GstElement *video_convert, *h264_encoder, *h264_payloader;
   gst_element_factory_make_wrapper(&h264_encoder, "x264enc", NULL);
   gst_element_factory_make_wrapper(&h264_payloader, "rtph264pay", NULL);
 
-  //g_object_set(h264_encoder, "pass", 5, "quantizer", 25,
-  //             "speed-preset", 6,  NULL);
-  g_object_set (test_src, "is-live", TRUE, "horizontal-speed", 1, NULL);
+  g_object_set(h264_encoder, "pass", 5, "quantizer", 25,
+               "speed-preset", 6,  NULL);
   g_object_set (h264_payloader, "config-interval", 2, NULL);
 
-  gst_bin_add_many(bin, test_src, h264_encoder, h264_payloader, NULL);
+  gst_bin_add_many(bin, h264_encoder, h264_payloader, NULL);
 
-  GstCaps* video_caps = gst_caps_new_simple ("video/x-raw",
-      "width", G_TYPE_INT, 352,
-      "height", G_TYPE_INT, 288, "framerate", GST_TYPE_FRACTION, 15, 1, NULL);
-
-  gst_element_link_filtered(test_src, h264_encoder, video_caps);
   gst_element_link_wrapper(h264_encoder, h264_payloader);
 
-  //setup_ghost_sink(video_convert, bin);
+  setup_ghost_sink(h264_encoder, bin);
   setup_ghost_src(h264_payloader, bin);
 
   StreamSession_t* session = create_stream_session(session_id);
   session->bin = GST_ELEMENT(bin);
+  gst_bin_add(GST_BIN(data->common_data->pipeline), session->bin);
+  session->v_caps = gst_caps_new_simple("video/x-raw",
+                                        "framerate", GST_TYPE_FRACTION, 15, 1,
+                                        NULL);
 
   return session;
 }
@@ -171,8 +167,7 @@ static gboolean setup_rtp_transmission_with_stream_session(
 
 
   gst_bin_add_many(GST_BIN(common_data->pipeline),
-                   rtp_sink, rtcp_sink, rtcp_src,
-                   stream_session->bin, NULL);
+                   rtp_sink, rtcp_sink, rtcp_src, NULL);
 
   g_signal_connect(common_data->rtp_bin, "request_aux_sender",
                    (GCallback)request_aux_sender, stream_session);

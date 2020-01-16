@@ -15,7 +15,6 @@ typedef struct _GstCommonData_t
 
 static GstCommonData_t* make_common_data()
 {
-  DEBUG("Start");
   GstCommonData_t *data = g_new0(GstCommonData_t, 1);
 
   DEBUG("create common data");
@@ -33,7 +32,6 @@ static GstCommonData_t* make_common_data()
   g_object_set(data->rtp_bin, "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
   gst_bin_add(GST_BIN(data->pipeline), data->rtp_bin);
 
-  DEBUG("End");
   return data;
 }
 

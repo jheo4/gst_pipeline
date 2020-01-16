@@ -9,7 +9,7 @@ typedef struct _StreamSession_t
   int num_ref;
   guint id;
   GstElement *bin, *rtp_bin;
-  GstCaps* caps;
+  GstCaps* v_caps;
 } StreamSession_t;
 
 
