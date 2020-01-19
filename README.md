@@ -17,7 +17,7 @@ make -j4
 #   sudo apt update
 #   sudo apt install golang-go
 
-cd ../../thrid_party/protobuf
+cd ../../third_party/protobuf
 ./autogen.sh
 ./configure
 make -j4
