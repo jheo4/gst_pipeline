@@ -58,3 +58,7 @@ builddir/
 *.png
 *.pdf
 *.dot
+
+# gRPC & Protobuf
+*.pb.h
+*.pb.cc

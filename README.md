@@ -1,11 +1,38 @@
 # gstreamer
 
 ## Installation
+### Install gRPC & protobuf
+```
+sudo apt install build-essential autoconf libtool pkg-config
+sudo apt install libgflags-dev libgtest-dev
+sudo apt install clang-5.0 libc++-dev
+git clone --recursive -b $(curl -L https://grpc.io/release) https://github.com/grpc/grpc
+cd grpc && mkdir -p cmake/build && cd cmake/build
+cmake ../..
+make -j4
+
+# If Golang is not installed, follow this
+#   sudo apt install software-properties-common
+#   sudo add-apt-repository ppa:longsleep/golang-backports
+#   sudo apt update
+#   sudo apt install golang-go
+
+cd ../../thrid_party/protobuf
+./autogen.sh
+./configure
+make -j4
+sudo make install
+sudo ldconfig
+
+cd ../.. && make -j8
+sudo make install
+```
+
 ### Install Meson
 Install Dependencies & Meson
 ```
 # Dependencies
-sudo apt-get install python3 python3-pip python3-setuptools \
+sudo apt install python3 python3-pip python3-setuptools \
                        python3-wheel ninja-build
 
 # Meson
