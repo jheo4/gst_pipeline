@@ -53,6 +53,7 @@ dkms.conf
 
 # Meson
 builddir/
+build/
 bkup/
 
 # Graph Export
