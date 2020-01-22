@@ -1,0 +1,24 @@
+syntax = "proto3";
+option java_package = "ex.grpc";
+package creator
+
+service Creator
+{
+  rpc bind(IP) returns (Port);
+}
+
+
+message Empty {}
+
+
+message IP
+{
+  string ip = 1;
+}
+
+
+message Port
+{
+  string port = 1;
+}
+

@@ -1,0 +1,18 @@
+syntax = "proto3";
+option java_package = "ex.grpc";
+package client
+
+service Client
+{
+  rpc stream(Empty) returns (Flag) {}
+}
+
+
+message Empty {}
+
+
+message Flag
+{
+  bool flag = 1;
+}
+

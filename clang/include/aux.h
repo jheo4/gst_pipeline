@@ -1,6 +1,6 @@
 #include <gst/gst.h>
 #include <stream_session.h>
-#include <gst_common.h>
+#include <gst_common.hpp>
 
 #ifndef __RTP_RTCP__
 #define __RTP_RTCP__

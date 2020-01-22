@@ -1,5 +1,5 @@
 #include <gst/gst.h>
-#include <gst_common.h>
+#include <gst_common.hpp>
 
 #ifndef __CB_BASIC__
 #define __CB_BASIC__

@@ -1,69 +1,46 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <gst/gst.h>
-#include <stream_session.h>
-#include <gst_common.h>
-#include <gst_wrapper.h>
+#include <gst/rtp/rtp.h>
+
 #include <aux.h>
-#include <ghost.h>
+#include <cb_basic.h>
+#include <debug.h>
+#include <gst_common.hpp>
+#include <gst_wrapper.h>
+#include <viewer.hpp>
 
-#ifndef __CLIENT__
-#define __CLIENT__
 
-
-typedef struct _ClientData_t
+Viewer::Viewer()
 {
-  GstCommonData_t* common_data;
-  GstElement *video_sink, *audio_sink;
-  StreamSession_t *v_session, *a_session;
-} ClientData_t;
-
-
-static gboolean init_client_data(ClientData_t* data)
-{
-  data->common_data = NULL;
-
-  DEBUG("set common data");
-  data->common_data = make_common_data();
-  g_object_set(data->common_data->rtp_bin, "latency", 200,
+  common_data = make_common_data();
+  g_object_set(common_data->rtp_bin, "latency", 200,
                "do-retransmission", TRUE,
                "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
-
-  DEBUG("make creator data & setting");
-
-  return TRUE;
+  GstBus* bus = gst_element_get_bus(GST_ELEMENT(common_data->pipeline));
+  connect_basic_signals(bus, common_data);
+  gst_object_unref(bus);
 }
 
 
-static void rtp_pad_added_handler(GstElement* src, GstPad* new_pad,
-                                  StreamSession_t* session)
+Viewer::~Viewer()
 {
-  gchar* new_pad_name = gst_pad_get_name(new_pad);
-  gchar* target_prefix = g_strdup_printf("recv_rtp_src_%u", session->id);
-
-  DEBUG("New pad: %s, Target Prefix: %s* \n", new_pad_name, target_prefix);
-
-  if(g_str_has_prefix(new_pad_name, target_prefix)) {
-    DEBUG("new pad has target prefix");
-
-    GstElement* parent = GST_ELEMENT(gst_element_get_parent(session->rtp_bin));
-    DEBUG("rtp_bin parent name: %s", gst_element_get_name(parent));
-
-    gst_bin_add(GST_BIN(parent), session->bin);
-    gst_element_sync_state_with_parent(session->bin);
-    gst_object_unref(parent);
-
-    GstPad* target_sink_pad = gst_element_get_static_pad(session->bin, "sink");
-    g_assert_cmpint(gst_pad_link(new_pad, target_sink_pad), ==, GST_PAD_LINK_OK);
-    gst_object_unref(target_sink_pad);
-  }
-
-  g_free(target_prefix);
-  g_free(new_pad_name);
+  gst_element_set_state(GST_ELEMENT(common_data->pipeline), GST_STATE_NULL);
+  gst_object_unref(common_data->pipeline);
+  g_main_loop_unref(common_data->loop);
 }
 
 
-static StreamSession_t* make_video_session(guint session_id,
-                                           ClientData_t *data)
+void Viewer::run()
+{
+  gst_element_set_state(GST_ELEMENT(common_data->pipeline), GST_STATE_PLAYING);
+  GST_DEBUG_BIN_TO_DOT_FILE((GstBin*)common_data->pipeline,
+                                  GST_DEBUG_GRAPH_SHOW_ALL, "client-pipeline");
+  g_main_loop_run(common_data->loop);
+}
+
+
+StreamSession_t* Viewer::make_video_session(guint id)
 {
   GstBin* bin = GST_BIN(gst_bin_new(NULL));
   GstElement *queue, *video_convert, *h264_decoder, *h264_depayloader, *test_sink;
@@ -82,44 +59,19 @@ static StreamSession_t* make_video_session(guint session_id,
 
   setup_ghost_sink(queue, bin);
 
-  StreamSession_t* session = create_stream_session(session_id);
+  StreamSession_t* session = create_stream_session(id);
   session->bin = GST_ELEMENT(bin);
   session->v_caps = gst_caps_new_simple("application/x-rtp",
                                         "media", G_TYPE_STRING, "video",
                                         "clock-rate", G_TYPE_INT, 90000,
                                         "encoding-name", G_TYPE_STRING, "H264",
                                         NULL);
-
   return session;
 }
 
 
-static StreamSession_t* make_audio_session(guint session_id,
-                                           ClientData_t *data)
-{
-  GstBin* bin = GST_BIN(gst_bin_new(NULL));
-  GstElement *audio_convert, *a52_decoder, *ac3_depayloader;
-
-  gst_element_factory_make_wrapper(&ac3_depayloader, "rtpac3depay", NULL);
-  gst_element_factory_make_wrapper(&audio_convert, "audioconvert", NULL);
-  gst_element_factory_make_wrapper(&a52_decoder, "a52dec", NULL);
-
-  gst_bin_add_many(bin, audio_convert, a52_decoder, ac3_depayloader, NULL);
-  gst_element_link_wrapper(ac3_depayloader, a52_decoder);
-  gst_element_link_wrapper(a52_decoder, audio_convert);
-
-  setup_ghost_sink(ac3_depayloader, bin);
-  setup_ghost_src(audio_convert, bin);
-
-  StreamSession_t* session = create_stream_session(session_id);
-  session->bin = GST_ELEMENT(bin);
-
-  return session;
-}
-
-
-static gboolean setup_rtp_delivery_with_stream_session(
-                        GstCommonData_t* common_data, StreamSession_t* session)
+void Viewer::setup_rtp_receiver_with_stream_session(StreamSession_t* session,
+                                  const char* addr, int port_base)
 {
   session->rtp_bin = g_object_ref(common_data->rtp_bin);
 
@@ -129,14 +81,13 @@ static gboolean setup_rtp_delivery_with_stream_session(
   gst_element_factory_make_wrapper(&rtcp_sink, "udpsink", NULL);
 
   DEBUG("setup rtp elements");
-  int session_port_base = 3000 + (session->id * 3); // for testing, set it as a creator's port number
-  g_object_set(rtp_src, "port", session_port_base,
+  g_object_set(rtp_src, "address", addr, "port", port_base,
                "caps", session->v_caps, NULL);
-  g_object_set(rtcp_src, "port", session_port_base+1, NULL);
-  g_object_set(rtcp_sink, "port", session_port_base+2,
-               "host", "127.0.0.1", "sync", FALSE, "async", FALSE, NULL);
+  g_object_set(rtcp_src, "address", addr, "port", port_base+1, NULL);
+  g_object_set(rtcp_sink, "port", port_base+2,
+               "host", addr, "sync", FALSE, "async", FALSE, NULL);
   DEBUG("RTP src stream (%i) / RTCP sink stream (%i) / RTCP src stream (%i)",
-        session_port_base, session_port_base+2, session_port_base+1);
+        port_base, port_base+2, port_base+1);
 
   DEBUG("connect rtp signals to cb handlers");
   gst_bin_add_many(GST_BIN(common_data->pipeline),
@@ -170,9 +121,5 @@ static gboolean setup_rtp_delivery_with_stream_session(
   g_free(pad_name);
 
   stream_session_unref(session);
-
-  return TRUE;
 }
-
-#endif
 
