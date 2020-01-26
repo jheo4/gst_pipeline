@@ -1,0 +1,36 @@
+syntax = "proto3";
+option java_package = "ex.grpc";
+package binder;
+
+service Binder
+{
+  rpc bind (IP) returns (BindInfo) {}
+  rpc send_heartbeat (BindInfo) returns (Empty) {}
+}
+
+
+message Empty {}
+
+
+message IP
+{
+  string ip = 1;
+}
+
+message BindInfo
+{
+  string server_ip = 1;
+  string client_ip = 2;
+  int32 port = 3;
+}
+
+
+message ServiceInfo
+{
+  string server_ip = 1;
+  string client_ip = 2;
+  int32 port = 3;
+  int32 last_seen = 4;
+  int32 status = 5;
+}
+

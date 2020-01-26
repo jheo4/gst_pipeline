@@ -20,7 +20,7 @@ grpc_reflection_dep = cppc.find_library('grpc++_reflection', required: false)
 if not protoc.found() or not protobuf_dep.found() or not grpcpp_dep.found() or not grpc_dep.found() or not grpc_cpp.found()
   error('MESON_SKIP_TEST: protobuf, grpc dependencies not found')
 endif
-
+subdir('proto')
 
 # GStreamer Settings
 gst_dep = dependency('gstreamer-1.0', method : 'pkg-config', required : true)
@@ -30,29 +30,26 @@ if not gst_dep.found() or not gst_aud_dep.found() or not gst_vid_dep.found()
   error('MESON_SKIP_TEST: gstreamer dependencies not found')
 endif
 
-
 # Include Directory
 inc = include_directories('include')
-
-subdir('src')
-subdir('proto')
+subdir('source')
 
 # Build Options
-build_args = ['-fpermissive']
+build_args = ['-fpermissive', '-pthread']
 
 # Target Executables
-executable('client', 'client.cpp',
-           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep],
+executable('client', 'ex_client.cpp', server_pb, server_grpc,
+           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
            include_directories : inc,
-           link_with : viewerlib,
+           link_with : [viewerlib, grpcclientlib],
            cpp_args : build_args, )
 
-executable('server', 'server.cpp',
-           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep],
+executable('server', 'ex_server.cpp', server_pb, server_grpc,
+           cpp_args : build_args,
+           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
            include_directories : inc,
-           link_with : streamerlib,
-           cpp_args : build_args, )
+           link_with : [streamerlib, grpcserverlib],)
 
 # GRPC Example
-executable('greeter_server', 'greeter_server.cc', pb_server, grpc_server,
-           dependencies : [protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep])
+#executable('greeter_server', 'greeter_server.cc', pb_server, grpc_server,
+#           dependencies : [protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep])

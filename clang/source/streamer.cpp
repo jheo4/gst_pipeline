@@ -70,17 +70,18 @@ StreamSession_t* Streamer::make_video_session(guint id)
 
 
 void Streamer::setup_rtp_sender_with_stream_session(StreamSession_t* session,
-                                              const char* addr, int port_base)
+                                                    const char* receiver_addr,
+                                                    int port_base)
 {
   GstElement *rtp_sink, *rtcp_sink, *rtcp_src;
   gst_element_factory_make_wrapper(&rtp_sink, "udpsink", NULL);
   gst_element_factory_make_wrapper(&rtcp_sink, "udpsink", NULL);
   gst_element_factory_make_wrapper(&rtcp_src, "udpsrc", NULL);
 
-  g_object_set(rtp_sink, "port", port_base, "host", addr, NULL);
-  g_object_set(rtcp_sink, "port", port_base+1, "host",
-               addr, "sync", FALSE, "async", FALSE, NULL);
-  g_object_set(rtcp_src, "address", addr, "port", port_base+2, NULL);
+  g_object_set(rtp_sink, "port", port_base, "host", receiver_addr, NULL);
+  g_object_set(rtcp_sink, "port", port_base+1, "host", receiver_addr,
+               "sync", FALSE, "async", FALSE, NULL);
+  g_object_set(rtcp_src, "address", receiver_addr, "port", port_base+2, NULL);
 
   gst_bin_add_many(GST_BIN(common_data->pipeline),
                    rtp_sink, rtcp_sink, rtcp_src, NULL);

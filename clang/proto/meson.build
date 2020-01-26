@@ -9,6 +9,9 @@ grpc_gen = generator(protoc, \
                                   '--plugin=protoc-gen-grpc=' + grpc_cpp.path(),
                                   '--grpc_out=@BUILD_DIR@', '@INPUT@'])
 
-pb_server = pb_gen.process('helloworld.proto', preserve_path_from : meson.current_source_dir())
-grpc_server = grpc_gen.process('helloworld.proto', preserve_path_from : meson.current_source_dir())
+server_pb = pb_gen.process('binder.proto', preserve_path_from : meson.current_source_dir())
+server_grpc = grpc_gen.process('binder.proto', preserve_path_from : meson.current_source_dir())
+
+#client_pb = pb_gen.process('client.proto', preserve_path_from : meson.current_source_dir())
+#client_grpc = grpc_gen.process('client.proto', preserve_path_from : meson.current_source_dir())
 
