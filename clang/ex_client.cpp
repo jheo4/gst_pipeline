@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   grpc_client.bind_request("0.0.0.0");
   DEBUG("bind test %s:%d", grpc_client.bind_info.server_ip().c_str(), grpc_client.bind_info.port());
 
-  sleep(4);
+  sleep(2);
   Viewer viewer;
   DEBUG("Set Video Session");
   viewer.v_session = viewer.make_video_session(0);
