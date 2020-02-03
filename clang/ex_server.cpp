@@ -60,6 +60,10 @@ void create_streamer(ServiceStreamer_t* service_streamer)
 }
 
 
+#define EXPERIMENT_OPTION 0
+// 0: naive option, every time just create a new streamer
+// 1: source share option, just add a new user-specific bin to the common src
+// 2: user-specific share option, just add a new rtp out port
 void run_streamer(ServerBinder* binder)
 {
   ServiceStreamer_t streamer;
@@ -73,9 +77,8 @@ void run_streamer(ServerBinder* binder)
         if(binder->service_table[i].status() == NON_ACTIVATED) {
           DEBUG("still non-actiavte after getting the lock... let's activate");
           // unlock if status is still non-activated after getting the lock
-          binder->service_table_mutex.unlock();
-
           binder->service_table[i].set_status(ACTIVATED);
+          binder->service_table_mutex.unlock();
           DEBUG("new bound!!! and let's activate...");
           streamer.info = &binder->service_table[i];
           create_streamer(&streamer);

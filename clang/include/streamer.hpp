@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string>
 #include <gst/gst.h>
 #include <stream_session.h>
 #include <gst_common.hpp>
@@ -7,6 +8,22 @@
 
 #ifndef __STREAMER__
 #define __STREAMER__
+
+using namespace std;
+
+typedef struct _SourceBin_t
+{
+  guint id;
+  GstElement* bin;
+} SourceBin_t;
+
+
+typedef struct _RTPSession_t
+{
+  guint connected_id;
+  GstElement *rtp_bin, *rtp_sink;
+  GstElement *rtcp_src, *rtcp_sink;
+} RTPSession_t;
 
 
 class Streamer : GstCommon
@@ -21,6 +38,14 @@ class Streamer : GstCommon
     // Methods
     Streamer();
     ~Streamer();
+    SourceBin_t* setup_source(guint id);
+    GstBin* setup_transcoder(string codec, string resolution); // TODO: bitrate...
+    RTPSession_t* setup_rtp(guint connected_id, string recv_addr,
+                            int port_base);
+
+    void connect_source_transcoder();
+    void connect_transcoder_rtp();
+
     void setup_rtp_sender_with_stream_session(StreamSession_t* session,
                                               const char* addr,
                                               int port_base);

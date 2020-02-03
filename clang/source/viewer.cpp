@@ -101,10 +101,10 @@ void Viewer::setup_rtp_receiver_with_stream_session(StreamSession_t* session,
                         stream_session_ref(session),
                         (GClosureNotify)stream_session_unref, 0);
 
-  g_signal_connect_data(common_data->rtp_bin, "request-pt-map",
+  /*g_signal_connect_data(common_data->rtp_bin, "request-pt-map",
                         G_CALLBACK(request_pt_map),
                         stream_session_ref(session),
-                        (GClosureNotify)stream_session_unref, 0);
+                        (GClosureNotify)stream_session_unref, 0);*/
 
   DEBUG("link rtp pads between udpsink/src and rtp bin");
   gchar* pad_name;

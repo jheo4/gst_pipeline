@@ -9,6 +9,7 @@
 #include <gst_common.hpp>
 #include <gst_wrapper.h>
 #include <streamer.hpp>
+#include <codec_pay.hpp>
 
 
 Streamer::Streamer()
@@ -41,6 +42,97 @@ void Streamer::run()
 }
 
 
+SourceBin_t* Streamer::setup_source(guint id)
+{
+  // setup source bin: [source]--[tee]
+  GstBin* src_bin = GST_BIN(gst_bin_new(NULL));
+  GstElement *test_src, *tee;
+
+  gst_element_factory_make_wrapper(&test_src, "videotestsrc", "test_src");
+  gst_element_factory_make_wrapper(&tee, "tee", "src_tee");
+
+  g_object_set (test_src, "is-live", TRUE, "horizontal-speed", 1, NULL);
+
+  gst_bin_add_many(src_bin, test_src, tee, NULL);
+  gst_element_link_wrapper(test_src, tee);
+
+  setup_ghost_tee_src(tee, src_bin);
+
+  // SourceBin_t setting...
+  SourceBin_t* new_src_bin = g_new0(SourceBin_t, 1);
+  new_src_bin->bin = GST_ELEMENT(src_bin);
+  new_src_bin->id = id;
+
+  return new_src_bin;
+}
+
+
+GstBin* Streamer::setup_transcoder(string codec, string resolution)
+{
+  // setup transcoder bin: [queue]--[videoscale]--[capsfilter]--[encoder]--[payloader]
+  GstBin* trans_bin = GST_BIN(gst_bin_new(NULL));
+  GstElement *in_queue, *scaler, *caps_filter, *encoder, *payloader, *out_tee;
+  GstCaps* scale_caps;
+
+  string width = resolution.substr(0, resolution.find("x"));
+  string height = \
+              resolution.substr(resolution.find("x")+1, resolution.find('\0'));
+  string caps_str = "video/x-raw,width=" + width + ",height=" + height;
+  string pay_type = get_pay_type(codec);
+
+  gst_element_factory_make_wrapper(&in_queue, "queue", "in_queue");
+  gst_element_factory_make_wrapper(&scaler, "videoscale", "scaler");
+  gst_element_factory_make_wrapper(&caps_filter, "capsfilter", "caps_filter");
+  gst_element_factory_make_wrapper(&encoder, codec.c_str(), "encoder");
+  gst_element_factory_make_wrapper(&payloader, pay_type.c_str(), "payloader");
+
+  scale_caps = gst_caps_from_string(caps_str.c_str());
+  g_object_set(G_OBJECT(caps_filter), "caps", scale_caps, NULL);
+  gst_caps_unref(scale_caps);
+
+  gst_bin_add_many(trans_bin, in_queue, scaler,
+                   caps_filter, encoder, payloader, out_tee, NULL);
+
+  gst_element_link_wrapper(in_queue, scaler);
+  gst_element_link_wrapper(scaler, caps_filter);
+  gst_element_link_wrapper(caps_filter, encoder);
+  gst_element_link_wrapper(encoder, payloader);
+  gst_element_link_wrapper(payloader, out_tee);
+
+  setup_ghost_sink(in_queue, trans_bin);
+  setup_ghost_tee_src(out_tee, trans_bin);
+
+  return trans_bin;
+}
+
+
+RTPSession_t* Streamer::setup_rtp(guint connected_id, string recv_addr,
+                                  int port_base)
+{
+  RTPSession_t *session = g_new0(RTPSession_t, 1);
+  session->connected_id = connected_id;
+
+  gst_element_factory_make_wrapper(&session->rtp_bin, "rtpbin", "rtp_bin");
+  gst_element_factory_make_wrapper(&session->rtp_sink, "udpsink", "rtp_sink");
+  gst_element_factory_make_wrapper(&session->rtcp_sink,
+                                   "udpsink", "rtcp_sink");
+  gst_element_factory_make_wrapper(&session->rtcp_src, "udpsrc","rtcp_src");
+
+  // RTP reference: https://bit.ly/30bBOzg
+  g_object_set(session->rtp_bin, "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
+  g_object_set(session->rtp_sink, "port", port_base,
+               "host", recv_addr.c_str(), NULL);
+  g_object_set(session->rtcp_sink, "port", port_base+1,
+               "host", recv_addr.c_str(), "sync", FALSE, "async", FALSE, NULL);
+  g_object_set(session->rtcp_src, "address", recv_addr.c_str(),
+               "port", port_base+2, NULL);
+	g_signal_connect(session->rtp_bin, "request_aux_sender",
+                   (GCallback)request_aux_sender, connected_id);
+
+  return session;
+}
+
+/*
 StreamSession_t* Streamer::make_video_session(guint id)
 {
   GstBin* bin = GST_BIN(gst_bin_new(NULL));
@@ -109,4 +201,4 @@ void Streamer::setup_rtp_sender_with_stream_session(StreamSession_t* session,
 
   stream_session_unref(session);
 }
-
+*/
