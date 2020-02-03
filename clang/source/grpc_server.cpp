@@ -35,32 +35,19 @@ bool ServerBinder::check_node_failure()
 
 
 Status ServerBinder::bind(ServerContext* context,
-                          const IP* in_addr, BindInfo* bind_info)
+                          const RequestInfo* request_info, BindInfo* bind_info)
 {
-  // if rebind within FAILURE_TIMELIMIT, just reconnect to the stream...
-  /*
-   * DISABLED FOR LOCAL TEST                                                   
-  for(const ServiceInfo& t : service_table) {
-    if(t.client_ip() == in_addr->ip()) {
-      t.set_last_seen(timestamp);
-      bind_info->set_server_ip(t.server_ip());
-      bind_info->set_client_ip(in_addr->ip());
-      bind_info->set_port(t.port());
-      return Status::OK;
-    }
-  }
-  */
-
   // new bind...
-  DEBUG("new bind ser %s cli %s port %d", server_ip.c_str(), in_addr->ip().c_str(), port_base);
+  DEBUG("new bind request to server(%s:%d) from client(%s)", server_ip.c_str(),
+        port_base, request_info->client_ip());
   bind_info->set_server_ip(server_ip);
-  bind_info->set_client_ip(in_addr->ip());
+  bind_info->set_client_ip(request_info->client_ip());
   bind_info->set_port(port_base);
 
   ServiceInfo new_service;
 
   new_service.set_server_ip(server_ip);
-  new_service.set_client_ip(in_addr->ip());
+  new_service.set_client_ip(request_info->client_ip());
   new_service.set_port(port_base);
   new_service.set_last_seen(timestamp);
   new_service.set_status(NON_ACTIVATED);

@@ -22,7 +22,7 @@ using grpc::ServerContext;
 using grpc::Status;
 
 using binder::Binder;
-using binder::IP;
+using binder::RequestInfo;
 using binder::BindInfo;
 using binder::ServiceInfo;
 using binder::Empty;
@@ -48,7 +48,7 @@ public:
 
   // grpc override func
   Status bind(ServerContext* context,
-              const IP* in_addr,
+              const RequestInfo* request_info,
               BindInfo* bind_info) override;
   Status send_heartbeat(ServerContext* context,
                         const BindInfo* bind_info,

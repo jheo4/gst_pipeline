@@ -4,7 +4,7 @@ package binder;
 
 service Binder
 {
-  rpc bind (IP) returns (BindInfo) {}
+  rpc bind (RequestInfo) returns (BindInfo) {}
   rpc send_heartbeat (BindInfo) returns (Empty) {}
 }
 
@@ -12,16 +12,21 @@ service Binder
 message Empty {}
 
 
-message IP
+message RequestInfo
 {
-  string ip = 1;
+  string client_ip = 1;
+  int32 stream_id = 2;
+  string codec = 3;
+  string resolution = 4;
 }
+
 
 message BindInfo
 {
   string server_ip = 1;
   string client_ip = 2;
   int32 port = 3;
+  string status_message = 4;
 }
 
 

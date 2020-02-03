@@ -125,7 +125,6 @@ int main(int argc, char **argv)
 
   server->Wait();
 
-  DEBUG("NIMI...!?");
   timestamp_thread.join();
   for(int i = 0 ; i < 10; i++)
     streamer_threads[i].join();

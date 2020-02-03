@@ -14,7 +14,7 @@ using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::Status;
 using binder::Binder;
-using binder::IP;
+using binder::RequestInfo;
 using binder::BindInfo;
 
 using namespace std;
@@ -27,6 +27,6 @@ private:
 public:
   BindInfo bind_info;
   GrpcClient(shared_ptr<Channel> server_channel);
-  void bind_request(string addr);
+  void bind_request(int stream_id, string codec, string resolution);
 };
 #endif
