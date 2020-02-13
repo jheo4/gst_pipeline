@@ -19,6 +19,14 @@
 #include <streamer.hpp>
 #include <grpc_server.hpp>
 
+#define MAX_PIPELINE_THREAD 10
+#define EXPERIMENT_OPTION 0
+/*
+ * 0: naive option, every time just create a new streamer
+ * 1: source share option, just add a new user-specific bin to the common src
+ * 2: user-specific share option: this should be very smart...
+ */
+
 // gst-launch-1.0 filesrc location=4k.mp4 ! decodebin ! videoconvert !
 //                x264enc ! avdec_h264 ! autovideosink
 // gst-launch-1.0 filesrc location=4k.mp4 ! decodebin ! audioconvert !
@@ -39,6 +47,7 @@ void create_streamer(ServiceStreamer_t* service_streamer)
   DEBUG("info server %s", service_streamer->info->server_ip().c_str());
   DEBUG("info port %d", service_streamer->info->port());
 
+  // check table
   Streamer streamer;
   service_streamer->streamer = &streamer;
   DEBUG("Set Video Session * Connect it to video src");
@@ -60,10 +69,6 @@ void create_streamer(ServiceStreamer_t* service_streamer)
 }
 
 
-#define EXPERIMENT_OPTION 0
-// 0: naive option, every time just create a new streamer
-// 1: source share option, just add a new user-specific bin to the common src
-// 2: user-specific share option, just add a new rtp out port
 void run_streamer(ServerBinder* binder)
 {
   ServiceStreamer_t streamer;
@@ -71,15 +76,15 @@ void run_streamer(ServerBinder* binder)
     sleep(1);
     for(int i = 0; i < binder->service_table.size(); i++) {
       if(binder->service_table[i].status() == NON_ACTIVATED) {
-        DEBUG("lock, there is a non-activated bind request");
+        DEBUG("try to get the lock, there is a non-activated bind request");
         binder->service_table_mutex.lock();
 
         if(binder->service_table[i].status() == NON_ACTIVATED) {
           DEBUG("still non-actiavte after getting the lock... let's activate");
-          // unlock if status is still non-activated after getting the lock
           binder->service_table[i].set_status(ACTIVATED);
           binder->service_table_mutex.unlock();
           DEBUG("new bound!!! and let's activate...");
+          // streamer_info vector
           streamer.info = &binder->service_table[i];
           create_streamer(&streamer);
         }
@@ -121,16 +126,16 @@ int main(int argc, char **argv)
   unique_ptr<Server> server = builder.BuildAndStart();
 
   thread timestamp_thread(update_timestamp, &server_binder);
-  thread streamer_threads[10];
-  for(int i = 0; i < 10; i++){
-    streamer_threads[i] = thread(run_streamer, &server_binder);
+  thread pipeline_threads[MAX_PIPELINE_THREAD];
+  for(int i = 0; i < MAX_PIPELINE_THREAD; i++){
+    pipeline_threads[i] = thread(run_streamer, &server_binder);
   }
 
   server->Wait();
 
   timestamp_thread.join();
-  for(int i = 0 ; i < 10; i++)
-    streamer_threads[i].join();
+  for(int i = 0 ; i < MAX_PIPELINE_THREAD; i++)
+    pipeline_threads[i].join();
 
   return 0;
 }

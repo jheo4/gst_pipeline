@@ -28,8 +28,6 @@ public:
   GstCommonData_t* make_common_data()
   {
     GstCommonData_t *data = g_new0(GstCommonData_t, 1);
-
-    DEBUG("create common data");
     data->pipeline = GST_PIPELINE(gst_pipeline_new(NULL));
     data->loop = g_main_loop_new(NULL, FALSE);
 
@@ -37,11 +35,11 @@ public:
       g_printerr("Failure to initialize gst common data. \n");
       return NULL;
     }
-
-    // RTP reference: https://bit.ly/30bBOzg
-
     return data;
   }
+
+
+  void clear_common_date(GstCommonData_t* data) { g_free(data); }
 
 
   void print_element_pad_caps(GstElement* elem, const gchar* pad_name)
@@ -55,9 +53,7 @@ public:
       gst_structure_foreach(caps_struct, print_struct_field, NULL);
     }
   }
-
 };
-
 
 #endif
 

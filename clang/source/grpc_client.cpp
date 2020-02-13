@@ -4,12 +4,12 @@ GrpcClient::GrpcClient(shared_ptr<Channel> server_channel) :
   binder_stub_(Binder::NewStub(server_channel)) {}
 
 
-void GrpcClient::bind_request(int stream_id, string codec, string resolution)
+void GrpcClient::bind_request(int source_id, string codec, string resolution)
 {
   ClientContext context;
   RequestInfo request_info;
   request_info.set_client_ip("0.0.0.0");
-  request_info.set_stream_id(stream_id);
+  request_info.set_source_id(source_id);
   request_info.set_codec(codec);
   request_info.set_resolution(resolution);
 

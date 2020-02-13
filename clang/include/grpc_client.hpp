@@ -27,6 +27,6 @@ private:
 public:
   BindInfo bind_info;
   GrpcClient(shared_ptr<Channel> server_channel);
-  void bind_request(int stream_id, string codec, string resolution);
+  void bind_request(int source_id, string codec, string resolution);
 };
 #endif

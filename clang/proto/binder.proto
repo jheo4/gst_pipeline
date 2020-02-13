@@ -15,7 +15,7 @@ message Empty {}
 message RequestInfo
 {
   string client_ip = 1;
-  int32 stream_id = 2;
+  int32 source_id = 2;
   string codec = 3;
   string resolution = 4;
 }

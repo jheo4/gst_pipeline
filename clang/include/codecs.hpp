@@ -30,5 +30,12 @@ string get_depay_type(string codec)
   }
 }
 
+string get_gpu_codec(string codec)
+{
+  // TODO
+  // return string codec to gpu codec
+  return NULL;
+}
+
 #endif
 

@@ -11,37 +11,33 @@
 
 using namespace std;
 
-typedef struct _SourceBin_t
+typedef struct _UserBin_t
 {
   guint id;
-  GstElement* bin;
-} SourceBin_t;
+  GstElement *bin;
+  GstElement *tee;
+} UserBin_t;
 
-
-typedef struct _RTPSession_t
+typedef struct _SinkBin_t
 {
-  guint connected_id;
-  GstElement *rtp_bin, *rtp_sink;
+  guint id;
+  GstElement *rtp_bin, *rtcp_bin;
+  GstElement *rtp_sink;
   GstElement *rtcp_src, *rtcp_sink;
-} RTPSession_t;
+} SinkBin_t;
 
 
+// need APIs
+//  - GstBin create_src_bin(source, id)
+//  - GstBin create_usr_bin
+//  - create_sink_bin
 class Streamer : GstCommon
 {
   public:
-    // Attributes
-    GstCommonData_t* common_data;
-    GstElement *file_src, *decodebin;
-    GstElement* test_src;
-    StreamSession_t* v_session;
-
-    // Methods
     Streamer();
     ~Streamer();
-    SourceBin_t* setup_source(guint id);
-    GstBin* setup_transcoder(string codec, string resolution); // TODO: bitrate...
-    RTPSession_t* setup_rtp(guint connected_id, string recv_addr,
-                            int port_base);
+    UserBin_t* create_user_bin(guint id, string codec, string resolution);
+    SinkBin_t* create_sink_bin(guint id, string recv_addr, int port_base);
 
     void connect_source_transcoder();
     void connect_transcoder_rtp();
