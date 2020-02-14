@@ -11,21 +11,11 @@
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
 
-#include <aux.h>
-#include <cb_basic.h>
-#include <debug.h>
-#include <gst_common.hpp>
-#include <gst_wrapper.h>
-#include <streamer.hpp>
-#include <grpc_server.hpp>
+#include <common/debug.h>
+#include <server/grpc_server.hpp>
 
-#define MAX_PIPELINE_THREAD 10
+#define MAX_PIPELINE 10
 #define EXPERIMENT_OPTION 0
-/*
- * 0: naive option, every time just create a new streamer
- * 1: source share option, just add a new user-specific bin to the common src
- * 2: user-specific share option: this should be very smart...
- */
 
 // gst-launch-1.0 filesrc location=4k.mp4 ! decodebin ! videoconvert !
 //                x264enc ! avdec_h264 ! autovideosink
@@ -41,7 +31,7 @@ typedef struct _ServiceStreamer_t
 } ServiceStreamer_t;
 
 
-void create_streamer(ServiceStreamer_t* service_streamer)
+void create_pipeline(ServiceStreamer_t* service_streamer)
 {
   DEBUG("info client %s", service_streamer->info->client_ip().c_str());
   DEBUG("info server %s", service_streamer->info->server_ip().c_str());
@@ -69,22 +59,20 @@ void create_streamer(ServiceStreamer_t* service_streamer)
 }
 
 
-void run_streamer(ServerBinder* binder)
+void pipeline_serving(ServerBinder* binder)
 {
   ServiceStreamer_t streamer;
   while(1) {
-    sleep(1);
+    sleep(0.1);
     for(int i = 0; i < binder->service_table.size(); i++) {
       if(binder->service_table[i].status() == NON_ACTIVATED) {
-        DEBUG("try to get the lock, there is a non-activated bind request");
         binder->service_table_mutex.lock();
 
         if(binder->service_table[i].status() == NON_ACTIVATED) {
-          DEBUG("still non-actiavte after getting the lock... let's activate");
           binder->service_table[i].set_status(ACTIVATED);
           binder->service_table_mutex.unlock();
-          DEBUG("new bound!!! and let's activate...");
-          // streamer_info vector
+
+          /* Bind & create streamer... */
           streamer.info = &binder->service_table[i];
           create_streamer(&streamer);
         }
@@ -113,7 +101,7 @@ int main(int argc, char **argv)
   // gst init...
   gst_init(&argc, &argv);
 
-  // protobuf init...
+  /* Setting GRPC */
   string addr("0.0.0.0");
   int grpc_port = 50051;
   int stream_port = 3000;
@@ -125,16 +113,19 @@ int main(int argc, char **argv)
   builder.RegisterService(&server_binder);
   unique_ptr<Server> server = builder.BuildAndStart();
 
-  thread timestamp_thread(update_timestamp, &server_binder);
-  thread pipeline_threads[MAX_PIPELINE_THREAD];
-  for(int i = 0; i < MAX_PIPELINE_THREAD; i++){
-    pipeline_threads[i] = thread(run_streamer, &server_binder);
+  /* Setting Threads */
+  thread timestamp_thread(update_timestamp, &server_binder); // binding thread
+  thread pipeline_threads[MAX_PIPELINE];
+  for(int i = 0; i < MAX_PIPELINE; i++){
+    pipeline_threads[i] = thread(pipeline_serving, &server_binder);
   }
 
+  /* Waiting */
   server->Wait();
 
+  /* Clean up */
   timestamp_thread.join();
-  for(int i = 0 ; i < MAX_PIPELINE_THREAD; i++)
+  for(int i = 0 ; i < MAX_PIPELINE; i++)
     pipeline_threads[i].join();
 
   return 0;

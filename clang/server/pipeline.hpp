@@ -1,5 +1,7 @@
 #include <string>
 #include <gst/gst.h>
+#include <gtk/gtk.h>
+#include <gst/rtp/rtp.h>
 #include <common/debug.h>
 #include <common/cb_basic.h>
 #include <common/gst_wrapper.h>
@@ -20,8 +22,7 @@ typedef struct _SinkBin_t
 {
   guint id;
   GstElement *rtp_bin, *rtcp_bin;
-  GstElement *rtp_sink;
-  GstElement *rtcp_src, *rtcp_sink;
+  GstCaps *v_caps;
 } SinkBin_t;
 
 
@@ -48,8 +49,16 @@ public:
   bool set_source();
   bool register_usrbin(UsrBin_t *_usrbin);
   bool register_sinkbin(SinkBin_t *_sinkbin);
+  /* TODO
+   * bool unregister_userbin(UsrBin_t *_usrbin);
+   * bool unregister_sinkbin(SinkBin_t *_sinkbin);
+   */
   bool connect_userbin_to_src(UsrBin_t *_usrbin);
   bool connect_sinkbin_to_userbin(SinkBin_t *_sink_bin, UsrBin_t *_usrbin);
+  void export_diagram() {
+    GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL,
+                              "streamer-pipeline");
+  }
 };
 
 #endif
