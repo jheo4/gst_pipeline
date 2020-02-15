@@ -50,8 +50,6 @@ int main(int argc, char **argv)
   pipeline.export_diagram();
   DEBUG("Pipline Run...");
   pipeline.set_pipeline_run();
-  pipeline.set_pipeline_ready();
-  pipeline.set_pipeline_run();
 
   return 0;
 }

@@ -35,7 +35,7 @@ endif
 inc = include_directories('.')
 subdir('common')
 subdir('server')
-#subdir('client')
+subdir('client')
 subdir('example')
 
 # Build Options

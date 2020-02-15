@@ -23,7 +23,7 @@ std::string get_depay_type(std::string codec)
   if(codec.compare("avdec_h264") == 0)
     return "rtph264depay";
   else {
-    DEBUG("Invalid codec type");
+    DEBUG("Invalid codec type: %s", codec.c_str());
     return NULL;
   }
 }

@@ -14,5 +14,11 @@ executable('server', 'server.cc',
            cpp_args : build_args,
            dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
            include_directories : inc,
-           link_with : [pipelinelib],)
+           link_with : [serverpipelinelib],)
+
+executable('client', 'client.cc',
+           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
+           include_directories : inc,
+           link_with : [clientpipelinelib],
+           cpp_args : build_args, )
 

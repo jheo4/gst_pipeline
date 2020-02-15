@@ -1,8 +1,3 @@
-#include <common/debug.h>
-#include <common/aux.h>
-#include <common/codecs.hpp>
-#include <common/cb_basic.h>
-#include <common/gst_wrapper.h>
 #include <server/pipeline.hpp>
 
 using namespace std;
