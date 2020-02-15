@@ -30,25 +30,29 @@ if not gst_dep.found() or not gst_aud_dep.found() or not gst_vid_dep.found()
   error('MESON_SKIP_TEST: gstreamer dependencies not found')
 endif
 
+
 # Include Directory
-inc = include_directories('include')
-subdir('source')
+inc = include_directories('.')
+subdir('common')
+subdir('server')
+#subdir('client')
+subdir('example')
 
 # Build Options
 build_args = ['-fpermissive', '-pthread']
 
 # Target Executables
-executable('client', 'ex_client.cpp', server_pb, server_grpc,
-           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
-           include_directories : inc,
-           link_with : [viewerlib, grpcclientlib],
-           cpp_args : build_args, )
+#executable('client', 'ex_client.cpp', server_pb, server_grpc,
+#           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
+#           include_directories : inc,
+#           link_with : [viewerlib, grpcclientlib],
+#           cpp_args : build_args, )
 
-executable('server', 'ex_server.cpp', server_pb, server_grpc,
-           cpp_args : build_args,
-           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
-           include_directories : inc,
-           link_with : [streamerlib, grpcserverlib],)
+#executable('server', 'ex_server.cpp', server_pb, server_grpc,
+#           cpp_args : build_args,
+#           dependencies : [gst_dep, gst_aud_dep, gst_vid_dep, protobuf_dep, grpcpp_dep, grpc_dep, grpc_reflection_dep],
+#           include_directories : inc,
+#           link_with : [streamerlib, grpcserverlib],)
 
 # GRPC Example
 #executable('greeter_server', 'greeter_server.cc', pb_server, grpc_server,

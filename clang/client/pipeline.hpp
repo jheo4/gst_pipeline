@@ -1,53 +1,67 @@
-#include <stdio.h>
 #include <string>
 #include <gst/gst.h>
-#include <stream_session.h>
-#include <gst_common.hpp>
-#include <gst_wrapper.h>
-#include <aux.h>
+#include <gst/rtp/rtp.h>
+#include <common/debug.h>
+#include <common/aux.h>
+#include <common/codecs.hpp>
+#include <common/cb_basic.h>
+#include <common/gst_wrapper.h>
 
-#ifndef __STREAMER__
-#define __STREAMER__
+#ifndef __PIPELINE__
+#define __PIPELINE__
 
-using namespace std;
-
-typedef struct _UserBin_t
+typedef struct _UsrBin_t
 {
   guint id;
   GstElement *bin;
-  GstElement *tee;
-} UserBin_t;
+} UsrBin_t;
 
-typedef struct _SinkBin_t
+
+typedef struct _SrcBin_t
 {
   guint id;
-  GstElement *rtp_bin, *rtcp_bin;
-  GstElement *rtp_sink;
-  GstElement *rtcp_src, *rtcp_sink;
-} SinkBin_t;
+  GstElement *rtp_bin;
+} SrcBin_t;
 
 
-// need APIs
-//  - GstBin create_src_bin(source, id)
-//  - GstBin create_usr_bin
-//  - create_sink_bin
-class Streamer : GstCommon
+UsrBin_t* make_usrbin(int id, std::string codec, std::string width, std::string height);
+SrcBin_t* make_srcbin(int id, std::string codec, std::string server_addr, int port_base);
+
+
+class Pipeline
 {
-  public:
-    Streamer();
-    ~Streamer();
-    UserBin_t* create_user_bin(guint id, string codec, string resolution);
-    SinkBin_t* create_sink_bin(guint id, string recv_addr, int port_base);
+public:
+  GstElement *pipeline;
+  GMainLoop *loop;
+  guint id;
+  GstElement *converter, *sink;
 
-    void connect_source_transcoder();
-    void connect_transcoder_rtp();
+  Pipeline(int _id);
+  ~Pipeline();
 
-    void setup_rtp_sender_with_stream_session(StreamSession_t* session,
-                                              const char* addr,
-                                              int port_base);
-    StreamSession_t* make_video_session(guint id);
-    void run();
+  bool set_sink();
+  bool set_pipeline_ready();
+  bool set_pipeline_run();
+
+  bool register_usrbin(UsrBin_t *_usrbin);
+  bool register_srcbin(SrcBin_t *_srcbin);
+  /* TODO
+   * bool unregister_userbin(UsrBin_t *_usrbin);
+   * bool unregister_sinkbin(SrcBin_t *_srcbin);
+   */
+  bool connect_userbin_to_sink(UsrBin_t *_usrbin);
+  bool connect_srcbin_to_userbin(SrcBin_t *_sink_bin, UsrBin_t *_usrbin);
+  /* TODO
+   * bool disconnect_userbin_to_src(UsrBin_t *_usrbin);
+   * bool disconnect_sinkbin_to_userbin(SinkBin_t *_sink_bin, UsrBin_t *_usrbin);
+   */
+  void export_diagram() {
+    GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL,
+                              "client-pipeline");
+  }
 };
+
+#endif
 
 
 /*
@@ -101,6 +115,4 @@ static void file_pad_added_handler(GstElement* src, GstPad* new_pad,
   if(audio_sink_pad != NULL) gst_object_unref(audio_sink_pad);
   if(video_sink_pad != NULL) gst_object_unref(video_sink_pad);
 }*/
-
-#endif
 

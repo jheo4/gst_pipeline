@@ -6,8 +6,6 @@
 -I/usr/include/cairo
 
 -I./clang
--I./clang/server
--I./clang/client
 
 -lgstreamer-1.0
 -lgobject-2.0

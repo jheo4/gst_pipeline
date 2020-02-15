@@ -3,7 +3,7 @@
 #include <common/codecs.hpp>
 #include <common/cb_basic.h>
 #include <common/gst_wrapper.h>
-#include <server/pipeline.hpp>
+#include <client/pipeline.hpp>
 
 using namespace std;
 
@@ -11,13 +11,13 @@ using namespace std;
 UsrBin_t* make_usrbin(int id, string codec, string width, string height)
 {
   /*  UserBin
-   *    b[ g_sink - queue - scaler - capsfilter - encoder - g_src ] - tee
+   *    b[ g_sink - queue - decoder - g_src ]
    */
   UsrBin_t* usrbin = g_new0(UsrBin_t, 1);
   usrbin->bin = gst_bin_new(NULL);
   usrbin->id = id;
 
-  GstElement *queue, *scaler, *caps_filter, *encoder;
+  GstElement *queue, *decoder;
   GstCaps *v_caps = gst_caps_new_simple("video/x-raw",
                                         "width", G_TYPE_INT, stoi(width),
                                         "height", G_TYPE_INT, stoi(height),
@@ -45,63 +45,81 @@ UsrBin_t* make_usrbin(int id, string codec, string width, string height)
 }
 
 
-SinkBin_t* make_sinkbin(int id, string codec, string recv_addr, int port_base)
+SrcBin_t* make_srcbin(int id, string codec, string server_addr, int port_base)
 {
   /* SinkBin
-   *   b[ g_sink - queue - payloader - rtp_bin - rtp_sink ]
-   *    [                   rtcp_src /         \ rtcp_sink]
+   *   b[ rtp_src - rtp_bin - depayloader - g_sink ]
+   *    [rtcp_src /         \ rtcp_sink]
    */
-  SinkBin_t* sinkbin = g_new0(SinkBin_t, 1);
-  sinkbin->rtp_bin = gst_bin_new(NULL);
-  sinkbin->id = id;
-  string pay_type = get_pay_type(codec);
+  SrcBin_t* srcbin = g_new0(SrcBin_t, 1);
+  srcbin->rtp_bin = gst_bin_new(NULL);
+  srcbin->id = id;
+  string depay_type = get_depay_type(codec);
+  string caps_type = get_caps_type(codec);
 
-  GstElement *queue, *payloader, *rtp_bin, *rtp_sink;
+  GstElement *depayloader, *rtp_bin, *rtp_src;
   GstElement *rtcp_src, *rtcp_sink;
+  GstCaps *v_caps = gst_caps_new_simple("application/x-rtp",
+                            "media", G_TYPE_STRING, "video",
+                            "clock-rate", G_TYPE_INT, 90000,
+                            "encoding-name", G_TYPE_STRING, caps_type.c_str(),
+                            NULL);
 
   /* Make RTP Elements */
-  gst_element_factory_make_wrapper(&queue, "queue", NULL);
-  gst_element_factory_make_wrapper(&payloader, pay_type.c_str(), NULL);
+  gst_element_factory_make_wrapper(&rtp_src, "udpsrc", NULL);
   gst_element_factory_make_wrapper(&rtp_bin, "rtpbin", NULL);
-  gst_element_factory_make_wrapper(&rtp_sink, "udpsink", NULL);
-
-  gst_bin_add_many(GST_BIN(sinkbin->rtp_bin), queue, payloader,
-                   rtp_bin, rtp_sink, NULL);
+  gst_element_factory_make_wrapper(&depayloader, depay_type.c_str(), NULL);
+  gst_bin_add_many(GST_BIN(srcbin->rtp_bin), rtp_src, rtp_bin, depayloader,
+                   NULL);
 
   /* Set RTP elements */
   g_object_set(rtp_bin, "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
-  g_signal_connect(rtp_bin, "request_aux_sender", (GCallback)request_aux_sender, id);
-  g_object_set(rtp_sink, "port", port_base, "host", recv_addr.c_str(), NULL);
+  g_object_set(rtp_src, "address", server_addr.c_str(), "port", port_base,
+               "caps", v_caps, NULL);
+
+  g_signal_connect(rtp_bin, "request_aux_receiver",
+                   (GCallback)request_aux_receiver, id);
+
+  g_signal_connect_data(rtp_bin, "pad-added",
+                        G_CALLBACK(rtp_pad_added_handler),
+                        stream_session_ref(session),
+                        (GClosureNotify)stream_session_unref, 0);
+
+  g_signal_connect_data(common_data->rtp_bin, "request-pt-map",
+                        G_CALLBACK(request_pt_map),
+                        stream_session_ref(session),
+                        (GClosureNotify)stream_session_unref, 0); */
+
 
   /* Link RTP elements
    *   queue - payloader - rtp_bin - rtp_sink
    */
   gst_element_link_wrapper(queue, payloader);
-  gchar *rtp_pad_name = g_strdup_printf("send_rtp_sink_%u", id);
-  gst_element_link_pads(payloader, "src", rtp_bin, rtp_pad_name);
+  gchar* rtp_pad_name = g_strdup_printf("recv_rtp_sink_%u", id);
+  gst_element_link_pads(rtp_src, "src", rtp_bin, rtp_pad_name);
+  free(rtp_pad_name);
   gst_element_link_wrapper(rtp_bin, rtp_sink);
-  g_free (rtp_pad_name);
-
 
   /* Make RTCP Elements */
   gst_element_factory_make_wrapper(&rtcp_src, "udpsrc", NULL);
   gst_element_factory_make_wrapper(&rtcp_sink, "udpsink", NULL);
-  gst_bin_add_many(GST_BIN(sinkbin->rtp_bin), rtcp_src, rtcp_sink, NULL);
+  gst_bin_add_many(GST_BIN(srcbin->rtp_bin), rtcp_src, rtcp_sink, NULL);
 
   /* Set RTCP Elements */
-  g_object_set(rtcp_src, "address", recv_addr.c_str(),
-               "port", port_base+1, NULL);
-  g_object_set(rtcp_sink, "port", port_base+2,
-               "host", recv_addr.c_str(), NULL);
+  g_object_set(rtcp_src, "address", server_addr.c_str(), "port", port_base+2,
+               NULL);
+  g_object_set(rtcp_sink, "port", port_base+1, "host", server_addr.c_str(),
+               "sync", FALSE, "async", FALSE, NULL);
 
   /* Link RTCP elements
    *   rtcp_src - rtp_bin - rtcp_sink
    */
-  gchar *rtcp_pad_name = g_strdup_printf ("recv_rtcp_sink_%u", id);
-  gst_element_link_pads (rtcp_src, "src", rtp_bin, rtcp_pad_name);
-  rtcp_pad_name = g_strdup_printf ("send_rtcp_src_%u", id);
-  gst_element_link_pads (rtp_bin, rtcp_pad_name, rtcp_sink, "sink");
-  g_free (rtcp_pad_name);
+  gchar *rtcp_pad_name = g_strdup_printf("send_rtcp_src_%u", id);
+  gst_element_link_pads(rtp_bin, rtcp_pad_name, rtcp_sink, "sink");
+
+  rtcp_pad_name = g_strdup_printf("recv_rtcp_sink_%u", id);
+  gst_element_link_pads(rtcp_src, "src", rtp_bin, rtcp_pad_name);
+  g_free(rtcp_pad_name);
 
   /* Set SinkBin GhostPads */
   setup_ghost_sink(queue, GST_BIN(sinkbin->rtp_bin));

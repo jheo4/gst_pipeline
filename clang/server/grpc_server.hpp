@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <debug.h>
+#include <common/debug.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>

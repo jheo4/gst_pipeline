@@ -1,18 +1,14 @@
 #include <gst/gst.h>
-#include <stream_session.h>
-#include <gst_common.hpp>
+#include <common/debug.h>
 
 #ifndef __RTP_RTCP__
 #define __RTP_RTCP__
-
-static GstElement* request_aux_sender(GstElement*, guint, StreamSession_t*);
-static GstElement* request_aux_receiver(GstElement*, guint, StreamSession_t*);
 
 /*
  * when the request_aux_sender signal is received, request_aux_sender returns the auxiliary stream sender
  *   auxiliary sender: new bin of rtprtxsend with ghost sink & source
  */
-static GstElement* request_aux_sender(GstElement* rtp_bin, guint sess_id, StreamSession_t* session)
+static GstElement* request_aux_sender(GstElement* rtp_bin, guint id)
 {
   GstElement *rtx, *bin;
   GstPad *pad;
@@ -37,13 +33,13 @@ static GstElement* request_aux_sender(GstElement* rtp_bin, guint sess_id, Stream
   gst_bin_add(GST_BIN(bin), rtx);
 
   pad = gst_element_get_static_pad(rtx, "src");
-  name = g_strdup_printf("src_%u", sess_id);
+  name = g_strdup_printf("src_%u", id);
   gst_element_add_pad(bin, gst_ghost_pad_new(name, pad));
   g_free(name);
   gst_object_unref(pad);
 
   pad = gst_element_get_static_pad(rtx, "sink");
-  name = g_strdup_printf("sink_%u", sess_id);
+  name = g_strdup_printf("sink_%u", id);
   gst_element_add_pad(bin, gst_ghost_pad_new(name, pad));
   g_free(name);
   gst_object_unref(pad);
@@ -52,7 +48,7 @@ static GstElement* request_aux_sender(GstElement* rtp_bin, guint sess_id, Stream
 }
 
 
-static GstElement* request_aux_receiver(GstElement* rtp_bin, guint session_id, StreamSession_t* session)
+static GstElement* request_aux_receiver(GstElement* rtp_bin, guint session_id)
 {
   GstElement *rtx, *bin;
   GstPad *pad;
@@ -90,18 +86,22 @@ static GstElement* request_aux_receiver(GstElement* rtp_bin, guint session_id, S
 /*
  *  request the payload-type mapping
  */
-static GstCaps* request_pt_map(GstElement* source, guint session_id,
-                               guint pt, StreamSession_t* session)
+typedef struct _PtMap_t
+{
+  guint id;
+  GstCaps *v_caps;
+} PtMap_t;
+
+
+static GstCaps* request_pt_map(GstElement* source, guint id,
+                               guint pt, PtMap_t* arg)
 {
   gchar* caps_str;
-  DEBUG("Looking for caps for pt %u in session %u, have %u \n",
-        pt, session_id, session->id);
-
-  if(session_id == session->id) {
-    caps_str = gst_caps_to_string(session->v_caps);
+  if(id == arg->id) {
+    caps_str = gst_caps_to_string(arg->v_caps);
     g_print("Returning %s \n", caps_str);
     g_free(caps_str);
-    return gst_caps_ref(session->v_caps);
+    return gst_caps_ref(arg->v_caps);
   }
 
   return NULL;
