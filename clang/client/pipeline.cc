@@ -106,7 +106,7 @@ bool Pipeline::set_source_with_usrsink(string codec, string server_addr,
 
   gst_element_factory_make_wrapper(&srcbin.rtp_bin, "rtpbin", NULL);
   gst_bin_add(GST_BIN(pipeline), srcbin.rtp_bin);
-  g_object_set(srcbin.rtp_bin, "latency", 200, "do-retransmission", TRUE,
+  g_object_set(srcbin.rtp_bin, "latency", 33, "do-retransmission", TRUE,
                "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
 
   g_signal_connect(srcbin.rtp_bin, "request_aux_receiver",
