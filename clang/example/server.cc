@@ -31,12 +31,13 @@ int main(int argc, char **argv)
   gst_init(&argc, &argv);
 
   int pipe_id = 0;
+  int port_base = 1234;
   DEBUG("Pipeline Setting...");
   Pipeline pipeline(pipe_id);
   pipeline.set_source();
 
   DEBUG("Userbin, Sinkbin creating...");
-  UsrBin_t *usrbin = make_usrbin(pipe_id, "x264enc", "640", "480");
+  UsrBin_t *usrbin = make_usrbin(pipe_id, "x264enc", "1280", "780");
   SinkBin_t *sinkbin = make_sinkbin(pipe_id, "x264enc", "0.0.0.0", 1234);
 
   DEBUG("Userbin, Sinkbin registering...");

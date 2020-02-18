@@ -40,7 +40,7 @@ bool Pipeline::set_pipeline_run()
 {
   DEBUG("run");
   gst_element_set_state(pipeline, GST_STATE_PLAYING);
-  g_main_loop_run(loop);
+  //g_main_loop_run(loop);
   return TRUE;
 }
 
@@ -72,7 +72,7 @@ bool Pipeline::set_usrsink(std::string codec)
   /* SinkBin Part */
   GstElement *converter, *sink;
   gst_element_factory_make_wrapper(&converter, "videoconvert", NULL);
-  gst_element_factory_make_wrapper(&sink, "autovideosink", NULL);
+  gst_element_factory_make_wrapper(&sink, "autovideosink", "video_sink");
 
   gst_bin_add_many(GST_BIN(pipeline), converter, sink, NULL);
 
@@ -106,7 +106,7 @@ bool Pipeline::set_source_with_usrsink(string codec, string server_addr,
 
   gst_element_factory_make_wrapper(&srcbin.rtp_bin, "rtpbin", NULL);
   gst_bin_add(GST_BIN(pipeline), srcbin.rtp_bin);
-  g_object_set(srcbin.rtp_bin, "latency", 33, "do-retransmission", TRUE,
+  g_object_set(srcbin.rtp_bin, "latency", 16, "do-retransmission", TRUE,
                "rtp-profile", GST_RTP_PROFILE_AVPF, NULL);
 
   g_signal_connect(srcbin.rtp_bin, "request_aux_receiver",

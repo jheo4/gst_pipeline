@@ -16,7 +16,7 @@ UsrBin_t* make_usrbin(int id, string codec, string width, string height)
   GstCaps *v_caps = gst_caps_new_simple("video/x-raw",
                                         "width", G_TYPE_INT, stoi(width),
                                         "height", G_TYPE_INT, stoi(height),
-                                        "framerate", GST_TYPE_FRACTION, 15, 1,
+                                        "framerate", GST_TYPE_FRACTION, 60, 1,
                                         NULL);
 
   /* GstBin */
