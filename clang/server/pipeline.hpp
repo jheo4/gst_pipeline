@@ -77,7 +77,7 @@ public:
   guint id;
   GstElement *src, *src_tee;
 
-  Pipeline(int _id);
+  Pipeline(int _id = 0);
   ~Pipeline();
 
   bool set_source();

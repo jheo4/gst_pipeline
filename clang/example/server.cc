@@ -15,7 +15,6 @@
 #include <server/pipeline.hpp>
 //#include <server/grpc_server.hpp>
 
-#define MAX_PIPELINE 10
 #define EXPERIMENT_OPTION 0
 
 // gst-launch-1.0 filesrc location=4k.mp4 ! decodebin ! videoconvert !
@@ -25,33 +24,49 @@
 
 using namespace std;
 
+#define NUM_OF_USERS 3
+
+void run_pipeline(Pipeline *pipeline) {
+  pipeline->set_pipeline_run();
+  sleep(10);
+}
+
 int main(int argc, char **argv)
 {
   // gst init...
   gst_init(&argc, &argv);
 
-  int pipe_id = 0;
+  int id = 0;
   int port_base = 1234;
-  DEBUG("Pipeline Setting...");
-  Pipeline pipeline(pipe_id);
-  pipeline.set_source();
 
-  DEBUG("Userbin, Sinkbin creating...");
-  UsrBin_t *usrbin = make_usrbin(pipe_id, "x264enc", "1280", "780");
-  SinkBin_t *sinkbin = make_sinkbin(pipe_id, "x264enc", "0.0.0.0", 1234);
+  /*
+   *  Case 1: 1 User & 1 Pipeline
+   *  Case 2: N User & 1 Pipeline (Source sharing)
+   *  Case 3: N User & 1 Pipeline (User-specific sharing)
+   */
+  Pipeline pipelines[1];
+  thread pipeline_threads[1];
+  UsrBin_t *usrbin[1];
+  SinkBin_t *sinkbin[NUM_OF_USERS];
 
-  DEBUG("Userbin, Sinkbin registering...");
-  pipeline.register_usrbin(usrbin);
-  pipeline.register_sinkbin(sinkbin);
+  pipelines[id].id = id;
+  pipelines[id].set_source();
+  usrbin[id] = make_usrbin(id, "x264enc", "1920", "1080");
+  pipelines[0].register_usrbin(usrbin[id]);
+  pipelines[0].connect_userbin_to_src(usrbin[id]);
+  for(id = 0; id < NUM_OF_USERS; id++) {
+    sinkbin[id] = make_sinkbin(id, "x264enc", "0.0.0.0", port_base);
 
-  DEBUG("Userbin, Sinkbin connecting...");
-  pipeline.connect_userbin_to_src(usrbin);
-  pipeline.connect_sinkbin_to_userbin(sinkbin, usrbin);
+    DEBUG("id/port : %d/%d", id, port_base);
+    port_base+=3;
 
-  pipeline.export_diagram();
-  DEBUG("Pipline Run...");
-  pipeline.set_pipeline_run();
+    pipelines[0].register_sinkbin(sinkbin[id]);
+    pipelines[0].connect_sinkbin_to_userbin(sinkbin[id], usrbin[0]);
+  }
 
+  pipeline_threads[0] = thread(run_pipeline, &pipelines[0]);
+  pipelines[0].export_diagram();
+  pipeline_threads[0].join();
   return 0;
 }
 

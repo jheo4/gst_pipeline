@@ -107,7 +107,7 @@ public:
   SrcBin_t srcbin;
   UsrSink_t usrsink;
 
-  Pipeline(int _id);
+  Pipeline(int _id = 0);
   ~Pipeline();
 
   bool set_pipeline_ready();

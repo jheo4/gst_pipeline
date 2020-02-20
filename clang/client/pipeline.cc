@@ -31,7 +31,7 @@ bool Pipeline::set_pipeline_ready()
 {
   DEBUG("ready");
   gst_element_set_state(pipeline, GST_STATE_READY);
-  g_main_loop_quit(loop);
+  //g_main_loop_quit(loop);
   return TRUE;
 }
 
@@ -72,7 +72,15 @@ bool Pipeline::set_usrsink(std::string codec)
   /* SinkBin Part */
   GstElement *converter, *sink;
   gst_element_factory_make_wrapper(&converter, "videoconvert", NULL);
-  gst_element_factory_make_wrapper(&sink, "autovideosink", "video_sink");
+
+  string sink_name = "fakesink" + to_string(id);
+  gst_element_factory_make_wrapper(&sink, "fakesink", sink_name.c_str());
+  g_object_set(sink, "sync", TRUE, NULL);
+
+  //string sink_name = "videosink" + to_string(id);
+  //gst_element_factory_make_wrapper(&sink, "autovideosink", sink_name.c_str());
+  //g_object_set(sink, "sync", TRUE, NULL);
+
 
   gst_bin_add_many(GST_BIN(pipeline), converter, sink, NULL);
 

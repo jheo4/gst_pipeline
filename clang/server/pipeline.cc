@@ -58,7 +58,10 @@ SinkBin_t* make_sinkbin(int id, string codec, string recv_addr, int port_base)
   gst_element_factory_make_wrapper(&queue, "queue", NULL);
   gst_element_factory_make_wrapper(&payloader, pay_type.c_str(), NULL);
   gst_element_factory_make_wrapper(&rtp_bin, "rtpbin", NULL);
-  gst_element_factory_make_wrapper(&rtp_sink, "udpsink", NULL);
+
+
+  string sink_name = "rtp_sink_" + to_string(id);
+  gst_element_factory_make_wrapper(&rtp_sink, "udpsink", sink_name.c_str());
 
   gst_bin_add_many(GST_BIN(sinkbin->rtp_bin), queue, payloader,
                    rtp_bin, rtp_sink, NULL);
@@ -123,7 +126,6 @@ bool Pipeline::set_pipeline_ready()
 {
   DEBUG("ready");
   gst_element_set_state(pipeline, GST_STATE_READY);
-  g_main_loop_quit(loop);
   return TRUE;
 }
 
@@ -132,7 +134,6 @@ bool Pipeline::set_pipeline_run()
 {
   DEBUG("run");
   gst_element_set_state(pipeline, GST_STATE_PLAYING);
-  g_main_loop_run(loop);
   return TRUE;
 }
 
