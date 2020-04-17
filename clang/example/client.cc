@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#define NUM_OF_USERS 3
+#define NUM_OF_USERS 5
 
 int main(int argc, char **argv)
 {
@@ -20,7 +20,6 @@ int main(int argc, char **argv)
 
   for(id = 0; id < NUM_OF_USERS; id++, port_base+=3) {
     pipelines[id].id = id;
-    DEBUG("id/port : %d/%d", id, port_base);
     pipelines[id].set_usrsink("avdec_h264");
     pipelines[id].set_source_with_usrsink("avdec_h264", "0.0.0.0", port_base);
     pipelines[id].set_pipeline_run();
